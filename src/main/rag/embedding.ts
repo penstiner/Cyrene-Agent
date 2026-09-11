@@ -320,11 +320,13 @@ export function getEmbeddingProvider(
 
 /**
  * 获取当前 embedding provider 的 identity。
- * 注意：对于 cloud provider 且未声明维度的情况，需要先调用 embed() 解析维度。
- * 此函数要求 provider 的维度已解析（resolvedDimensions !== undefined）。
+ * cloud provider 且维度未声明（留空自动探测）时，identity 在首次 embed 前不可知：
+ * 本函数会自动做一次预热 embed 探测维度，避免「建缓存键需要身份、身份需要先 embed」
+ * 的死锁（贴纸/场景/文档索引的首次构建就是第一次 embed）。
  */
-export async function getEmbeddingProviderIdentity(): Promise<EmbeddingProviderIdentity> {
-  const provider = getEmbeddingProvider();
+export async function getEmbeddingProviderIdentity(
+  provider: EmbeddingProvider | null = getEmbeddingProvider(),
+): Promise<EmbeddingProviderIdentity> {
   if (!provider) throw new Error("Embedding provider is not available");
 
   if (provider.cacheIdentity) return provider.cacheIdentity;
@@ -341,21 +343,20 @@ export async function getEmbeddingProviderIdentity(): Promise<EmbeddingProviderI
     };
   }
 
-  // cloud provider：如果维度已解析，返回 identity
+  // cloud provider：维度未探测时先预热一次，解析 declared/resolved 维度
   const cloudModelPrefix = "openai-compat-";
   if (provider.name.startsWith(cloudModelPrefix)) {
-    const dims = provider.resolvedDimensions ?? provider.declaredDimensions;
-    if (dims === undefined) {
+    if (provider.cacheIdentity === undefined) {
+      await provider.embed("cyrene-identity-warmup");
+    }
+    const identity = provider.cacheIdentity;
+    if (!identity) {
       throw new Error(
         "Embedding dimensions not yet resolved for cloud provider. " +
         "Call embed() first, or declare dimensions in settings."
       );
     }
-    return {
-      provider: "openai-compat",
-      model: provider.name.slice(cloudModelPrefix.length),
-      dimensions: dims,
-    };
+    return identity;
   }
 
   const dims = provider.resolvedDimensions ?? provider.declaredDimensions;
