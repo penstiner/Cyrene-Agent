@@ -64,6 +64,10 @@ export interface ModelSettings {
   };
   /** Embedding 维度（可选，仅 cloud 模式）。留空 = 自动探测。 */
   embeddingDimensions?: number;
+  /** RAG 向量化模式：auto = 本地 BGE-M3；cloud = 云端 OpenAI 兼容 /embeddings。 */
+  embeddingMode?: "auto" | "cloud";
+  /** 云端 Embedding 配置（如硅基流动）；baseUrl + apiKey 齐全才生效。 */
+  embeddingCloud?: { baseUrl: string; apiKey: string; model: string };
   multimodal: boolean;
   thinkingOverride?: -1 | 0 | 1;
   /** 禁用 max_tokens 注入。仅对自定义端点生效（与主进程 model-settings.ts 对齐）。 */
