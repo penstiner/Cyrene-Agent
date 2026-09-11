@@ -142,6 +142,13 @@ export interface ModelSettings {
    * 留空 = 首次请求自动探测；填写 = 作为严格声明并与实际响应校验。
    */
   embeddingDimensions?: number;
+  /**
+   * RAG 向量化模式：auto = 本地 BGE-M3；cloud = 云端 OpenAI 兼容 /embeddings
+   * （如硅基流动），配置见 embeddingCloud。
+   */
+  embeddingMode: "auto" | "cloud";
+  /** 云端 Embedding 配置；baseUrl + apiKey 齐全才生效，model 缺省 BAAI/bge-m3。 */
+  embeddingCloud?: { baseUrl: string; apiKey: string; model: string };
   // 视觉模型配置（可选）。undefined 或未启用 = 不支持看图，read_image 诚实拒绝。
   vision?: VisionModelConfig;
   /** 主模型是否多模态。true 时图片直发主模型（direct），vision 配置保留但忽略。 */
@@ -176,6 +183,7 @@ const DEFAULT_MODEL_SETTINGS: ModelSettings = {
   citaRepairBudgetSec: 8,
   rerankerMode: "standard",
   embeddingModel: "bgem3",
+  embeddingMode: "auto",
   multimodal: true,
   contextWindowTokens: DEFAULT_CONTEXT_WINDOW_TOKENS,
 };
@@ -235,6 +243,17 @@ function normalizeVisionConfig(input: Partial<VisionModelConfig> | undefined): V
   const model = typeof input.model === "string" ? input.model.trim() : "";
   // 三项全空 = 未启用
   if (!baseUrl && !apiKey && !model) return undefined;
+  return { baseUrl, apiKey, model };
+}
+
+/** 云端 Embedding 配置清洗：baseUrl + apiKey 齐全才返回；model 缺省 BAAI/bge-m3（硅基流动免费档）。 */
+function normalizeEmbeddingCloud(input: Partial<ModelSettings["embeddingCloud"]> | null | undefined): ModelSettings["embeddingCloud"] {
+  const baseUrl = typeof input?.baseUrl === "string" ? input.baseUrl.trim().replace(/\/+$/, "") : "";
+  const apiKey = typeof input?.apiKey === "string" ? input.apiKey.trim() : "";
+  if (!baseUrl || !apiKey) return undefined;
+  const model = typeof input?.model === "string" && input.model.trim()
+    ? input.model.trim()
+    : "BAAI/bge-m3";
   return { baseUrl, apiKey, model };
 }
 
@@ -354,6 +373,8 @@ export function normalizeModelSettings(input: Partial<ModelSettings> | null | un
       && input.embeddingDimensions > 0
       ? Math.round(input.embeddingDimensions)
       : undefined,
+    embeddingMode: input?.embeddingMode === "cloud" ? "cloud" : "auto",
+    embeddingCloud: normalizeEmbeddingCloud(input?.embeddingCloud),
     vision: normalizeVisionConfig(rawVision),
     multimodal,
     thinkingOverride: input?.thinkingOverride,

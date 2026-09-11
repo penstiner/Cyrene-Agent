@@ -68,7 +68,7 @@ import { modalState } from "./shared/modal-state";
 import { formatDateTime, escapeHtml } from "./shared/format";
 import { parsePositiveIntOrThrow, parseCommandLine } from "./shared/parse";
 import { apiState, type SavedProfileLite } from "./api/state";
-import { apiForm, apiRuntimeForm, presetCards, profileList, profileListCount, profileEditorTitle, deleteProfileBtn, presetWebsiteLink, displayNameInput, baseUrlInput, baseUrlResetBtn, modelInput, modelInputSuggestions, contextWindowInput, apiKeyInput, apiKeyLabel, apiKeyHint, testConnectionBtn, transportSelect, transportHint, endpointPreview, customEndpointControls, customEndpointOverrides, customEndpointSummary, customEndpointGuideBtn, workFlowAdaptBtn, apiNoteText, multimodalToggle, embeddingDimensionsInput, toggleEnableThinking, toggleDisableThinking, toggleDisableMaxToken } from "./api/dom";
+import { apiForm, apiRuntimeForm, presetCards, profileList, profileListCount, profileEditorTitle, deleteProfileBtn, presetWebsiteLink, displayNameInput, baseUrlInput, baseUrlResetBtn, modelInput, modelInputSuggestions, contextWindowInput, apiKeyInput, apiKeyLabel, apiKeyHint, testConnectionBtn, transportSelect, transportHint, endpointPreview, customEndpointControls, customEndpointOverrides, customEndpointSummary, customEndpointGuideBtn, workFlowAdaptBtn, apiNoteText, multimodalToggle, embeddingDimensionsInput, embeddingCloudEnableToggle, embeddingCloudFields, embeddingCloudBaseUrlInput, embeddingCloudApiKeyInput, embeddingCloudModelInput, toggleEnableThinking, toggleDisableThinking, toggleDisableMaxToken } from "./api/dom";
 import { visionBaseUrlInput, visionApiKeyInput, visionModelInput, visionFieldsWrap, testVisionBtn, visionTestStatus } from "./vision/dom";
 import { appearanceForm, appearanceSaveStatus, runtimeSyncSelect, runtimeSyncNote, windowCornerRadiusInput, windowCornerRadiusVal, petAlwaysOnTopInput, petVisibleInput, petZoomInput, petZoomVal, chatLineHeightInput, chatLineHeightVal, assistantBubbleEnabledInput, chatParaSpacingInput, chatParaSpacingVal, launchAtLoginInput, uiFontCurrent, uiFontImportButton, uiFontResetButton, uiIconSelect, screenshotHotkeyInput, openChromeGpu, disableGpuInput, sidebarVisibleInput, tasksVisibleInput, toastSoundEnabledInput } from "./appearance/dom";
 import { generalForm, generalSaveStatus, languageSelect, defaultChatModeSelect, segmentedOutputSelect, mobileMessageSegmentationSelect, proactiveChatSelect, proactiveDeliveryRow, proactiveDeliverySelect, chatSocialContextEnabledInput, momentsEnabledInput, cyreneMomentsPostingEnabledInput, cyreneMomentsReactionsEnabledInput, momentsCharacterReactionsEnabledInput, momentsLivelinessSelect, momentsPostingRow, momentsReactionsRow, momentsCharacterRow, momentsLivelinessRow, citaEnabledInput, citaEngineSelect, clearChatHistoryBtn, customStyleSamplingBtn, customStylePromptBtn } from "./general/dom";
@@ -1002,6 +1002,14 @@ async function loadConfig(): Promise<void> {
     if (embeddingDimensionsInput) {
       embeddingDimensionsInput.value = cfg.embeddingDimensions ? String(cfg.embeddingDimensions) : "";
     }
+    if (embeddingCloudEnableToggle && embeddingCloudFields) {
+      const cloudActive = cfg.embeddingMode === "cloud";
+      embeddingCloudEnableToggle.checked = cloudActive;
+      embeddingCloudFields.style.display = cloudActive ? "block" : "none";
+      embeddingCloudBaseUrlInput!.value = cfg.embeddingCloud?.baseUrl ?? "";
+      embeddingCloudApiKeyInput!.value = cfg.embeddingCloud?.apiKey ?? "";
+      embeddingCloudModelInput!.value = cfg.embeddingCloud?.model ?? "";
+    }
     toggleEnableThinking.checked = cfg.thinkingOverride === 1;
     toggleDisableThinking.checked = cfg.thinkingOverride === -1;
     toggleDisableMaxToken.checked = !!cfg.disableMaxToken;
@@ -1481,6 +1489,12 @@ generalForm.addEventListener("submit", async (e) => {
   }
 });
 
+embeddingCloudEnableToggle?.addEventListener("change", () => {
+  if (embeddingCloudFields) {
+    embeddingCloudFields.style.display = embeddingCloudEnableToggle.checked ? "block" : "none";
+  }
+});
+
 cyrenePanel.addEventListener("submit", async (e) => {
   e.preventDefault();
   setCyreneSaveStatus("保存中…");
@@ -1490,14 +1504,27 @@ cyrenePanel.addEventListener("submit", async (e) => {
     const parsedDim = Number.isFinite(parsedNum) && parsedNum > 0
       ? Math.max(1, Math.min(65536, Math.round(parsedNum)))
       : undefined;
+    const cloudEnabled = embeddingCloudEnableToggle?.checked === true;
+    const cloudBaseUrl = embeddingCloudBaseUrlInput?.value?.trim() ?? "";
+    const cloudApiKey = embeddingCloudApiKeyInput?.value?.trim() ?? "";
+    const cloudModel = embeddingCloudModelInput?.value?.trim() ?? "";
+    const embeddingCloud = cloudEnabled && cloudBaseUrl && cloudApiKey
+      ? { baseUrl: cloudBaseUrl, apiKey: cloudApiKey, model: cloudModel }
+      : undefined;
     await window.settings!.saveConfig({
       runtimeSync: getRuntimeSyncValue(),
       stickerEnabled: stickerEnabledInput.checked,
       stickerSize: getStickerSizeValue(),
       stickerSimilarityThreshold: parseFloat(stickerThresholdInput.value),
       embeddingDimensions: parsedDim && parsedDim > 0 ? parsedDim : undefined,
+      embeddingMode: embeddingCloud ? "cloud" : "auto",
+      embeddingCloud,
     });
-    setCyreneSaveStatus("已保存", "is-ok");
+    if (cloudEnabled && !embeddingCloud) {
+      setCyreneSaveStatus("已保存（云端配置不完整：Base URL 和 API Key 必填，未启用云端模式）", "is-error");
+    } else {
+      setCyreneSaveStatus("已保存", "is-ok");
+    }
   } catch {
     setCyreneSaveStatus("保存失败", "is-error");
   }

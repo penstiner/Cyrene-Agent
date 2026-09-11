@@ -749,6 +749,34 @@
               </div>
 
               <div class="agent-setting-subgroup" style="margin-top:12px">
+                <strong>云端 Embedding <span style="font-weight:400;font-size:12px;color:var(--text-muted)">（OpenAI 兼容 /embeddings，如硅基流动）</span></strong>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                    <input type="checkbox" id="embedding-cloud-enable" style="cursor:pointer">
+                    <span style="font-size:13px">启用云端向量化（覆盖本地模型）</span>
+                  </label>
+                </div>
+                <div id="embedding-cloud-fields" style="display:none;margin-top:8px">
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <span style="font-size:12px;color:var(--text-muted);width:76px;flex:none">Base URL</span>
+                    <input type="text" id="embedding-cloud-base-url" class="agent-input" placeholder="https://api.siliconflow.cn/v1" style="flex:1">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <span style="font-size:12px;color:var(--text-muted);width:76px;flex:none">API Key</span>
+                    <input type="password" id="embedding-cloud-api-key" class="agent-input" placeholder="sk-…" autocomplete="off" style="flex:1">
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <span style="font-size:12px;color:var(--text-muted);width:76px;flex:none">模型</span>
+                    <input type="text" id="embedding-cloud-model" class="agent-input" placeholder="BAAI/bge-m3" style="flex:1">
+                  </div>
+                  <p style="font-size:12px;color:var(--text-muted);margin-top:6px">
+                    硅基流动（siliconflow.cn）的 BAAI/bge-m3 免费可用；模型留空时默认 BAAI/bge-m3。
+                    保存后重启应用生效，用于文档检索、世界书召回与长期记忆。
+                  </p>
+                </div>
+              </div>
+
+              <div class="agent-setting-subgroup" style="margin-top:12px">
                 <strong>Embedding 维度 <span style="font-weight:400;font-size:12px;color:var(--text-muted)">（仅 Cloud 模式）</span></strong>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
                   <input type="number" id="embedding-dimensions-input" class="agent-input" placeholder="留空自动探测" min="1" max="65536" step="1" style="width:160px">

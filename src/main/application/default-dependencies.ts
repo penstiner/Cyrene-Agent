@@ -387,7 +387,12 @@ export function createDefaultApplicationDependencies(): ApplicationDependencies 
 
       initRag: async () => {
         const modelSettings = loadModelSettings();
-        await initRAG("auto", undefined, undefined, modelSettings.embeddingModel, modelSettings.embeddingDimensions);
+        const cloud = modelSettings.embeddingMode === "cloud" ? modelSettings.embeddingCloud : undefined;
+        if (cloud) {
+          await initRAG("cloud", cloud.baseUrl, cloud.apiKey, cloud.model, modelSettings.embeddingDimensions);
+        } else {
+          await initRAG("auto", undefined, undefined, modelSettings.embeddingModel, modelSettings.embeddingDimensions);
+        }
         logger.info(LogTag.RAG, "RAG initialized OK");
       },
 
