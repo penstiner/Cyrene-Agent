@@ -17,6 +17,7 @@ import { CacheDownloader } from "./cache-downloader";
 import { scanAudioFiles } from "./local-music-scanner";
 import {
   PlaybackSession,
+  type MusicPlaybackMode,
   type MusicPlaybackSessionSnapshot,
   type PlaybackSessionInput,
 } from "./playback-session";
@@ -490,6 +491,18 @@ export class MusicService {
   }
 
   getPlaybackSession(): MusicPlaybackSessionSnapshot | null {
+    return this.playbackSession.snapshot();
+  }
+
+  /**
+   * 修改当前播放队列的循环模式并广播给音乐窗口（渲染端 applyPlaybackSession 同步 UI 状态）。
+   * 只影响后续切歌；没有活动队列（从未同步会话或已清空）时返回 null。
+   */
+  setPlaybackMode(mode: MusicPlaybackMode): MusicPlaybackSessionSnapshot | null {
+    const session = this.playbackSession.snapshot();
+    if (!session) return null;
+    this.playbackSession.replace({ ...session, playbackMode: mode });
+    this.emitPlaybackSessionChange();
     return this.playbackSession.snapshot();
   }
 

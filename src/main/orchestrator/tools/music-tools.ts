@@ -146,7 +146,7 @@ export function buildMusicTools(service: MusicService): ToolDefinition[] {
       id: "music_get_playback_status",
       capability: "music.playback_status",
       name: "获取当前播放状态",
-      description: "查询当前播放状态：正在播放还是暂停、当前曲目（歌名/歌手）、播放进度、音量。回答「现在在放什么」「播到哪了」这类问题用此工具。不消耗 API 配额，不要求登录；没在播放时 track 为 null。",
+      description: "查询当前播放状态：正在播放还是暂停、当前曲目（歌名/歌手）、播放进度、音量、当前播放队列的循环模式。回答「现在在放什么」「播到哪了」「现在是单曲循环吗」这类问题用此工具。不消耗 API 配额，不要求登录；没在播放时 track 为 null。",
       enabled: true,
       modes: ["work", "learn"],
       risk: "safe",
@@ -156,11 +156,13 @@ export function buildMusicTools(service: MusicService): ToolDefinition[] {
       verificationPolicy: "none" as const,
       execute: async () => {
         const s = service.getPlaybackState();
+        const session = service.getPlaybackSession?.() ?? null;
         return JSON.stringify({
           kind: "playback_status",
           connected: s.connected,
           isPlaying: s.loaded && !s.paused,
           paused: s.loaded && s.paused,
+          playbackMode: session?.playbackMode ?? null,
           track: s.track
             ? {
                 encryptedId: s.track.encryptedId,
@@ -194,6 +196,54 @@ export function buildMusicTools(service: MusicService): ToolDefinition[] {
         }
         await service.playbackStop();
         return JSON.stringify({ kind: "stop_playback", stopped: true });
+      },
+    },
+    {
+      id: "music_set_playback_mode",
+      capability: "music.set_playback_mode",
+      name: "设置播放模式",
+      description:
+        "设置当前播放队列的循环模式：'one' 单曲循环、'all' 列表循环、'shuffle' 随机播放、'off' 顺序播放（播完即停）。" +
+        "用户说「单曲循环这首歌」「列表循环」「随机播放」时调用。作用于当前队列的后续切歌，" +
+        "音乐面板会同步显示；当前没有播放队列时无法设置，需先播放一首歌。可用 music_get_playback_status 查询当前模式。",
+      enabled: true,
+      modes: ["work", "learn"],
+      risk: "input-control",
+      inputSchema: {
+        type: "object",
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["one", "all", "shuffle", "off"],
+            description: "'one'=单曲循环，'all'=列表循环，'shuffle'=随机播放，'off'=顺序播放（播完即停）",
+          },
+        },
+        required: ["mode"],
+      },
+      needsContext: false,
+      effectKind: "external_side_effect" as const,
+      verificationPolicy: "none" as const,
+      execute: async (args) => {
+        const mode = String(args.mode ?? "");
+        if (mode !== "off" && mode !== "all" && mode !== "one" && mode !== "shuffle") {
+          throw new Error("E_INVALID_PLAYBACK_MODE");
+        }
+        const session = service.setPlaybackMode(mode);
+        if (!session) {
+          return JSON.stringify({
+            kind: "set_playback_mode",
+            applied: false,
+            playbackMode: null,
+            reason: "no_active_queue",
+            hint: "当前没有播放队列，请先用 music_play_track 播放一首歌，再设置播放模式。",
+          });
+        }
+        return JSON.stringify({
+          kind: "set_playback_mode",
+          applied: true,
+          playbackMode: session.playbackMode,
+          queueLength: session.queue.length,
+        });
       },
     },
     {

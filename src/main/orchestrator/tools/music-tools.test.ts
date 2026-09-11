@@ -21,6 +21,8 @@ function serviceDouble() {
     getCachedTracks: vi.fn(),
     removeCachedTrack: vi.fn(),
     getPlaybackState: vi.fn(),
+    getPlaybackSession: vi.fn(),
+    setPlaybackMode: vi.fn(),
     playbackStop: vi.fn(),
   };
 }
@@ -53,9 +55,9 @@ function selectionSet(overrides: Record<string, unknown> = {}) {
 }
 
 describe("music Agent tools (M4 — CITA removed)", () => {
-  it("declares 15 tools with stable capabilities (music_present_tracks deleted)", () => {
+  it("declares 16 tools with stable capabilities (music_present_tracks deleted)", () => {
     const tools = buildMusicTools(serviceDouble() as never);
-    expect(tools).toHaveLength(15);
+    expect(tools).toHaveLength(16);
     const capabilities = Object.fromEntries(tools.map((t) => [t.id, t.capability]));
     expect(capabilities).toMatchObject({
       music_get_daily_recommendations: "music.daily_recommendations",
@@ -64,6 +66,7 @@ describe("music Agent tools (M4 — CITA removed)", () => {
       music_play_playlist: "music.play_playlist",
       music_get_playback_status: "music.playback_status",
       music_stop_playback: "music.stop_playback",
+      music_set_playback_mode: "music.set_playback_mode",
       music_my_playlists: "music.my_playlists",
       music_playlist_detail: "music.playlist_detail",
       music_create_playlist: "music.create_playlist",
@@ -282,6 +285,86 @@ describe("music Agent tools (M4 — CITA removed)", () => {
     expect(service.playbackStop).not.toHaveBeenCalled();
   });
 
+  it("music_set_playback_mode applies a valid mode to the active session", async () => {
+    const service = serviceDouble();
+    service.setPlaybackMode.mockReturnValue({
+      queue: [track()],
+      queueIndex: 0,
+      playbackMode: "one",
+      playlistId: "pl1",
+    });
+    const tool = buildMusicTools(service as never)
+      .find((t) => t.id === "music_set_playback_mode")!;
+
+    const output = JSON.parse(await tool.execute({ mode: "one" }));
+
+    expect(service.setPlaybackMode).toHaveBeenCalledWith("one");
+    expect(output).toEqual({
+      kind: "set_playback_mode",
+      applied: true,
+      playbackMode: "one",
+      queueLength: 1,
+    });
+  });
+
+  it("music_set_playback_mode reports no_active_queue when no session exists", async () => {
+    const service = serviceDouble();
+    service.setPlaybackMode.mockReturnValue(null);
+    const tool = buildMusicTools(service as never)
+      .find((t) => t.id === "music_set_playback_mode")!;
+
+    const output = JSON.parse(await tool.execute({ mode: "shuffle" }));
+
+    expect(output.applied).toBe(false);
+    expect(output.reason).toBe("no_active_queue");
+    expect(output.hint).toContain("music_play_track");
+  });
+
+  it("music_set_playback_mode rejects unknown modes", async () => {
+    const service = serviceDouble();
+    const tool = buildMusicTools(service as never)
+      .find((t) => t.id === "music_set_playback_mode")!;
+
+    await expect(tool.execute({ mode: "loop-forever" })).rejects.toThrow("E_INVALID_PLAYBACK_MODE");
+    expect(service.setPlaybackMode).not.toHaveBeenCalled();
+  });
+
+  it("music_get_playback_status exposes the queue playback mode", async () => {
+    const service = serviceDouble();
+    service.getPlaybackState.mockReturnValue({
+      connected: true, loaded: true, paused: false,
+      position: 30, duration: 200, volume: 70,
+      track: { encryptedId: ENC, name: "晴天", artists: ["周杰伦"] },
+    });
+    service.getPlaybackSession.mockReturnValue({
+      queue: [track()],
+      queueIndex: 0,
+      playbackMode: "shuffle",
+      playlistId: "pl1",
+    });
+    const tool = buildMusicTools(service as never)
+      .find((t) => t.id === "music_get_playback_status")!;
+
+    const output = JSON.parse(await tool.execute({}));
+
+    expect(output.playbackMode).toBe("shuffle");
+  });
+
+  it("music_get_playback_status returns null playbackMode without a session", async () => {
+    const service = serviceDouble();
+    service.getPlaybackState.mockReturnValue({
+      connected: true, loaded: false, paused: false,
+      position: 0, duration: 0, volume: 70,
+    });
+    service.getPlaybackSession.mockReturnValue(null);
+    const tool = buildMusicTools(service as never)
+      .find((t) => t.id === "music_get_playback_status")!;
+
+    const output = JSON.parse(await tool.execute({}));
+
+    expect(output.playbackMode).toBeNull();
+  });
+
   it("music_my_playlists returns playlists", async () => {
     const service = serviceDouble();
     service.getMyPlaylists.mockResolvedValue([
@@ -453,7 +536,7 @@ describe("music Agent tools (M4 — CITA removed)", () => {
     // This test documents the CITA removal. If someone re-introduces CITA
     // imports, this will fail at compile time.
     const tool = buildMusicTools(serviceDouble() as never);
-    expect(tool.length).toBe(15);
+    expect(tool.length).toBe(16);
     // No tool has controlledInput with context_ref type
     for (const t of tool) {
       if (t.controlledInput) {

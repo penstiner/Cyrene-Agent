@@ -444,6 +444,31 @@ describe("MusicService (M3 OpenAPI)", () => {
     })).toMatchObject({ queueIndex: -1, queue: [{ id: ENC }] });
   });
 
+  it("setPlaybackMode switches the mode of the active session and broadcasts", () => {
+    const s = makeService();
+    const changed: Array<string | undefined> = [];
+    s.onPlaybackSessionChange((snapshot) => {
+      changed.push(snapshot?.playbackMode);
+    });
+
+    s.syncPlaybackSession({
+      queue: [{ id: ENC, name: "晴天", artists: [] }],
+      queueIndex: 0,
+      playbackMode: "off",
+      playlistId: "playlist-1",
+    });
+
+    const updated = s.setPlaybackMode("one");
+    expect(updated).toMatchObject({ playbackMode: "one", queueIndex: 0 });
+    // syncPlaybackSession 建立会话时广播一次 "off"，setPlaybackMode 再广播一次 "one"
+    expect(changed).toEqual(["off", "one"]);
+  });
+
+  it("setPlaybackMode returns null without an active session", () => {
+    const s = makeService();
+    expect(s.setPlaybackMode("shuffle")).toBeNull();
+  });
+
   it("removeCachedTrack rejects when track is playing (E_CACHE_TRACK_PLAYING)", async () => {
     mocks.getSongDetail.mockResolvedValue({ name: "晴天", playUrl: "http://x/y.mp3" });
     const s = makeService();
