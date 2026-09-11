@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>智谱网络搜索 · 设置</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+      font-size: 13px;
+      padding: 20px;
+      background: canvas;
+      color: canvastext;
+    }
+    h1 { font-size: 15px; margin-bottom: 6px; }
+    .hint { opacity: 0.72; line-height: 1.6; margin-bottom: 14px; }
+    .hint a { color: dodgerblue; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    input[type="password"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid color-mix(in srgb, canvastext 22%, transparent);
+      border-radius: 8px;
+      background: field;
+      color: fieldtext;
+      font-size: 13px;
+      outline: none;
+    }
+    input[type="password"]:focus { border-color: dodgerblue; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+    button {
+      flex: 1;
+      padding: 8px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      background: buttonface;
+      color: buttontext;
+    }
+    button.primary { background: dodgerblue; color: white; }
+    button.danger { color: crimson; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .status { margin-top: 12px; min-height: 18px; line-height: 1.5; }
+    .status.ok { color: seagreen; }
+    .status.err { color: crimson; }
+  </style>
+</head>
+<body>
+  <h1>智谱网络搜索</h1>
+  <p class="hint">
+    配置智谱开放平台的 API Key 后，Cyrene 即可在对话中联网搜索实时信息。<br />
+    Key 可在 <a href="https://open.bigmodel.cn" target="_blank">open.bigmodel.cn</a> 的「API Keys」页面创建或查看。
+  </p>
+  <label for="key">API Key</label>
+  <input id="key" type="password" placeholder="粘贴智谱 API Key" autocomplete="off" />
+  <div class="actions">
+    <button id="save" class="primary">保存</button>
+    <button id="clear" class="danger">清除已保存的 Key</button>
+  </div>
+  <div id="status" class="status"></div>
+
+  <script>
+    const { ipcRenderer } = require("electron");
+    const keyInput = document.getElementById("key");
+    const saveBtn = document.getElementById("save");
+    const clearBtn = document.getElementById("clear");
+    const statusEl = document.getElementById("status");
+    const CHANNEL = "plugin:zhipu-web-search";
+
+    function setStatus(text, kind = "") {
+      statusEl.textContent = text;
+      statusEl.className = `status ${kind}`;
+    }
+
+    async function refresh() {
+      try {
+        const { hasKey } = await ipcRenderer.invoke(`${CHANNEL}:get-status`);
+        clearBtn.disabled = !hasKey;
+        if (hasKey) {
+          keyInput.placeholder = "已保存（输入新值可覆盖）";
+          setStatus("✓ 已配置 API Key", "ok");
+        } else {
+          setStatus("尚未配置 API Key");
+        }
+      } catch (err) {
+        setStatus(`读取状态失败：${err?.message ?? err}`, "err");
+      }
+    }
+
+    saveBtn.addEventListener("click", async () => {
+      const key = keyInput.value.trim();
+      if (!key) { setStatus("请先粘贴 API Key", "err"); return; }
+      saveBtn.disabled = true;
+      try {
+        const result = await ipcRenderer.invoke(`${CHANNEL}:set-key`, key);
+        if (result?.ok) {
+          keyInput.value = "";
+          setStatus("✓ 已保存，即刻生效", "ok");
+        } else {
+          setStatus(`保存失败：${result?.error ?? "未知错误"}`, "err");
+        }
+      } catch (err) {
+        setStatus(`保存失败：${err?.message ?? err}`, "err");
+      } finally {
+        saveBtn.disabled = false;
+        await refresh();
+      }
+    });
+
+    clearBtn.addEventListener("click", async () => {
+      clearBtn.disabled = true;
+      try {
+        await ipcRenderer.invoke(`${CHANNEL}:clear-key`);
+        keyInput.placeholder = "粘贴智谱 API Key";
+        setStatus("已清除 API Key");
+      } catch (err) {
+        setStatus(`清除失败：${err?.message ?? err}`, "err");
+      } finally {
+        await refresh();
+      }
+    });
+
+    keyInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") saveBtn.click();
+    });
+
+    refresh();
+  </script>
+</body>
+</html>

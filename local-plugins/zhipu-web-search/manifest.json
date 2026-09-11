@@ -1,0 +1,11 @@
+{
+  "apiVersion": 1,
+  "id": "zhipu-web-search",
+  "name": "智谱网络搜索",
+  "version": "0.1.0",
+  "description": "让 Cyrene 能搜索互联网获取实时信息：新闻、百科、最新事件或「帮我查一下」场景自动调用（智谱 web_search API）。首次使用请点插件卡片的「打开」按钮配置 API Key。",
+  "author": "浅梦",
+  "entry": "index.cjs",
+  "defaultEnabled": false,
+  "deps": ["secrets"]
+}
