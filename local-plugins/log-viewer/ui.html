@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-ui-theme="pearl-white">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cyrene 日志查看器</title>
+  <link rel="stylesheet" href="cyrene-theme.css" />
+  <style>
+    body { display: flex; flex-direction: column; padding: 14px; gap: 10px; }
+    .toolbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 14px;
+    }
+    .toolbar .cy-divider { width: 1px; height: 22px; background: var(--cy-border-soft); }
+    label.chk {
+      display: flex; align-items: center; gap: 5px; cursor: pointer;
+      user-select: none; font-size: 12.5px; color: var(--cy-text);
+    }
+    label.chk input { accent-color: var(--cy-pink-500); cursor: pointer; }
+    .toolbar input[type="text"] { width: 190px; }
+    .toolbar input[type="number"] { width: 76px; }
+    .spacer { flex: 1; }
+
+    #log {
+      flex: 1; overflow: auto; padding: 10px 16px;
+      font-family: var(--cy-font-mono); font-size: 12px; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-all;
+      background: rgba(255, 255, 255, 0.92);
+    }
+    #log::-webkit-scrollbar { width: 10px; }
+    #log::-webkit-scrollbar-thumb { background: var(--cy-pink-100); border-radius: 999px; }
+    #log::-webkit-scrollbar-thumb:hover { background: var(--cy-pink-200); }
+    .line { padding: 1px 0; }
+    .line.ERROR { color: #c73a4d; }
+    .line.WARN { color: #a8690f; }
+    .line.DEBUG { color: var(--cy-faint); }
+    .line .ts { color: var(--cy-faint); margin-right: 8px; }
+    .line .tag { color: var(--cy-pink-600); font-weight: 600; margin-right: 8px; }
+    .line .cont { display: block; padding-left: 14px; opacity: 0.82; white-space: pre-wrap; }
+    .empty { color: var(--cy-faint); padding: 28px; text-align: center; }
+
+    .statusbar {
+      display: flex; gap: 16px; align-items: center;
+      padding: 8px 14px; font-size: 11.5px; color: var(--cy-muted);
+    }
+    .live-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--cy-ok); margin-right: 5px;
+      box-shadow: 0 0 6px rgba(26, 154, 108, 0.5);
+    }
+    .live-dot.off { background: var(--cy-border-strong); box-shadow: none; }
+    .meta { margin-left: auto; color: var(--cy-faint); }
+  </style>
+</head>
+<body>
+  <div class="toolbar cy-card">
+    <select id="file" class="cy-select" title="日志文件"></select>
+    <span class="cy-divider"></span>
+    <select id="level" class="cy-select" title="级别过滤">
+      <option value="all">全部级别</option>
+      <option value="ERROR">仅错误</option>
+      <option value="WARN">警告+</option>
+      <option value="INFO">信息+</option>
+    </select>
+    <input type="text" id="search" class="cy-input" placeholder="关键词过滤…" style="width: 180px" />
+    <select id="bytes" class="cy-select" title="读取范围">
+      <option value="65536">64 KB</option>
+      <option value="262144" selected>256 KB</option>
+      <option value="1048576">1 MB</option>
+    </select>
+    <span class="cy-divider"></span>
+    <label class="chk"><input type="checkbox" id="follow" checked />跟随最新</label>
+    <label class="chk"><input type="checkbox" id="wrap" checked />自动换行</label>
+    <span class="spacer"></span>
+    <button class="cy-btn" id="reload">刷新</button>
+    <button class="cy-btn cy-btn--ghost-danger" id="clear-view">清空视图</button>
+  </div>
+
+  <div id="log" class="cy-card"><div class="empty">加载中…</div></div>
+
+  <div class="statusbar cy-card">
+    <span><span class="live-dot" id="live-dot"></span><span id="live-text">实时跟随中</span></span>
+    <span id="count-text">0 条</span>
+    <span id="update-text"></span>
+    <span class="meta">Esc 暂停跟随 · 再按恢复</span>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require("electron");
+    const CHANNEL = "plugin:log-viewer";
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+    let entries = [];
+    let stickBottom = true;
+    let livePaused = false;
+
+    const LEVEL_ORDER = ["DEBUG", "INFO", "WARN", "ERROR"];
+
+    function render() {
+      const level = $("level").value;
+      const kw = $("search").value.trim().toLowerCase();
+      const frag = document.createDocumentFragment();
+      let shown = 0;
+      for (const e of entries) {
+        if (level !== "all" && LEVEL_ORDER.indexOf(e.level) < LEVEL_ORDER.indexOf(level)) continue;
+        const hay = (e.raw + "\n" + e.cont.join("\n")).toLowerCase();
+        if (kw && !hay.includes(kw)) continue;
+        shown++;
+        const div = document.createElement("div");
+        div.className = "line " + e.level;
+        const ts = document.createElement("span"); ts.className = "ts"; ts.textContent = e.ts;
+        const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = e.tag;
+        div.append(ts, tag, document.createTextNode(e.message));
+        for (const c of e.cont) {
+          const cc = document.createElement("span"); cc.className = "cont"; cc.textContent = c;
+          div.append(cc);
+        }
+        frag.append(div);
+      }
+      logEl.replaceChildren(frag);
+      if (!logEl.childElementCount) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "没有匹配的日志条目";
+        logEl.append(empty);
+      }
+      $("count-text").textContent = `显示 ${shown} 条 / 载入 ${entries.length} 条`;
+    }
+
+    function scrollIfFollow() {
+      if (stickBottom && $("follow").checked) logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    logEl.addEventListener("scroll", () => {
+      stickBottom = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 24;
+    });
+    $("follow").addEventListener("change", () => { if ($("follow").checked) scrollIfFollow(); });
+    $("wrap").addEventListener("change", () => {
+      logEl.style.whiteSpace = $("wrap").checked ? "pre-wrap" : "pre";
+    });
+    $("level").addEventListener("change", render);
+    $("search").addEventListener("input", render);
+    $("reload").addEventListener("click", loadActive);
+    $("clear-view").addEventListener("click", () => { entries = []; render(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        livePaused = !livePaused;
+        $("follow").checked = !livePaused;
+        $("live-text").textContent = livePaused ? "已暂停（Esc 恢复）" : "实时跟随中";
+      }
+    });
+
+    async function loadFiles() {
+      const { files, activeFile } = await ipcRenderer.invoke(`${CHANNEL}:get-files`);
+      const sel = $("file");
+      sel.innerHTML = "";
+      for (const f of files) {
+        const opt = document.createElement("option");
+        opt.value = f.name;
+        opt.textContent = `${f.name}（${(f.size / 1024).toFixed(1)} KB）`;
+        sel.append(opt);
+      }
+      if (activeFile && files.some((f) => f.name === activeFile)) sel.value = activeFile;
+      return sel.value;
+    }
+
+    async function loadActive() {
+      const file = $("file").value;
+      if (!file) {
+        logEl.innerHTML = '<div class="empty">logs 目录下没有日志文件</div>';
+        return;
+      }
+      const { entries: parsed, size } = await ipcRenderer.invoke(`${CHANNEL}:read-tail`, file, Number($("bytes").value));
+      entries = parsed;
+      render();
+      scrollIfFollow();
+      $("update-text").textContent = `${file} · 读取 ${size} 字节 · ${new Date().toLocaleTimeString()} 刷新`;
+    }
+
+    $("file").addEventListener("change", async () => {
+      entries = [];
+      render();
+      await loadActive();
+    });
+    $("bytes").addEventListener("change", loadActive);
+
+    ipcRenderer.on(`${CHANNEL}:append`, (_e, payload) => {
+      if (livePaused) return;
+      if (payload.file !== $("file").value) return;
+      if (payload.rotated) entries = payload.entries;
+      else entries.push(...payload.entries);
+      if (entries.length > 8000) entries = entries.slice(-6000);
+      render();
+      scrollIfFollow();
+      $("update-text").textContent = `${new Date().toLocaleTimeString()} 收到 ${payload.entries.length} 条`;
+    });
+
+    (async () => {
+      await loadFiles();
+      await loadActive();
+    })();
+  </script>
+</body>
+</html>

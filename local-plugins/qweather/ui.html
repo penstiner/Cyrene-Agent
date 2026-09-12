@@ -2,41 +2,49 @@
 <html lang="zh-CN" data-ui-theme="pearl-white">
 <head>
   <meta charset="UTF-8" />
-  <title>智谱网络搜索 · 设置</title>
+  <title>和风天气 · 设置</title>
   <link rel="stylesheet" href="cyrene-theme.css" />
   <style>
     body { display: flex; flex-direction: column; padding: 22px; }
     .card { padding: 22px 24px; display: flex; flex-direction: column; height: 100%; }
     .hint { margin: 6px 0 16px; }
+    .row { margin-bottom: 12px; }
     .actions { display: flex; gap: 10px; margin-top: 14px; }
     .actions .cy-btn { flex: 1; }
-    .status { margin-top: 14px; min-height: 20px; }
-    input[type="password"].cy-input { letter-spacing: 0.5px; }
+    .status { margin-top: 14px; min-height: 36px; }
   </style>
 </head>
 <body>
   <div class="card cy-card">
-    <h1>智谱网络搜索</h1>
+    <h1>和风天气</h1>
     <p class="cy-hint hint">
-      配置智谱开放平台的 API Key 后，Cyrene 即可在对话中联网搜索实时信息。<br />
-      Key 可在 <a href="https://open.bigmodel.cn" target="_blank">open.bigmodel.cn</a> 的「API Keys」页面创建或查看。
+      配置后 Cyrene 可查询实时天气、未来三天预报、空气质量与生活指数。<br />
+      Key 与<b>专属 API Host</b>都在 <a href="https://console.qweather.com" target="_blank">console.qweather.com</a>
+      （设置页）获取。公共地址 devapi.qweather.com 已停用，必须填专属 Host（形如 abc123.def.qweatherapi.com）。
     </p>
-    <label class="cy-label" for="key">API Key</label>
-    <input id="key" type="password" class="cy-input" placeholder="粘贴智谱 API Key" autocomplete="off" />
+    <div class="row">
+      <label class="cy-label" for="host">专属 API Host</label>
+      <input id="host" type="text" class="cy-input" placeholder="https://abc123.def.qweatherapi.com" autocomplete="off" />
+    </div>
+    <div class="row">
+      <label class="cy-label" for="key">API Key</label>
+      <input id="key" type="password" class="cy-input" placeholder="粘贴和风 API Key" autocomplete="off" />
+    </div>
     <div class="actions">
       <button id="save" class="cy-btn cy-btn--primary">保存</button>
-      <button id="clear" class="cy-btn cy-btn--ghost-danger">清除已保存的 Key</button>
+      <button id="clear" class="cy-btn cy-btn--ghost-danger">清除配置</button>
     </div>
     <div id="status" class="cy-status status"></div>
   </div>
 
   <script>
     const { ipcRenderer } = require("electron");
+    const hostInput = document.getElementById("host");
     const keyInput = document.getElementById("key");
     const saveBtn = document.getElementById("save");
     const clearBtn = document.getElementById("clear");
     const statusEl = document.getElementById("status");
-    const CHANNEL = "plugin:zhipu-web-search";
+    const CHANNEL = "plugin:qweather";
 
     function setStatus(text, kind = "") {
       statusEl.textContent = text;
@@ -45,13 +53,14 @@
 
     async function refresh() {
       try {
-        const { hasKey } = await ipcRenderer.invoke(`${CHANNEL}:get-status`);
-        clearBtn.disabled = !hasKey;
+        const { hasKey, host } = await ipcRenderer.invoke(`${CHANNEL}:get-status`);
+        clearBtn.disabled = !hasKey && !host;
+        if (host) hostInput.value = host;
         if (hasKey) {
           keyInput.placeholder = "已保存（输入新值可覆盖）";
-          setStatus("✓ 已配置 API Key", "ok");
+          setStatus(`✓ 已配置（Host: ${host}）`, "ok");
         } else {
-          setStatus("尚未配置 API Key", "muted");
+          setStatus("尚未配置", "muted");
         }
       } catch (err) {
         setStatus(`读取状态失败：${err?.message ?? err}`, "err");
@@ -60,10 +69,12 @@
 
     saveBtn.addEventListener("click", async () => {
       const key = keyInput.value.trim();
+      const host = hostInput.value.trim();
       if (!key) { setStatus("请先粘贴 API Key", "err"); return; }
+      if (!host) { setStatus("请填写专属 API Host", "err"); return; }
       saveBtn.disabled = true;
       try {
-        const result = await ipcRenderer.invoke(`${CHANNEL}:set-key`, key);
+        const result = await ipcRenderer.invoke(`${CHANNEL}:set-config`, key, host);
         if (result?.ok) {
           keyInput.value = "";
           setStatus("✓ 已保存，即刻生效", "ok");
@@ -81,9 +92,11 @@
     clearBtn.addEventListener("click", async () => {
       clearBtn.disabled = true;
       try {
-        await ipcRenderer.invoke(`${CHANNEL}:clear-key`);
-        keyInput.placeholder = "粘贴智谱 API Key";
-        setStatus("已清除 API Key", "muted");
+        await ipcRenderer.invoke(`${CHANNEL}:clear-config`);
+        hostInput.value = "";
+        keyInput.value = "";
+        keyInput.placeholder = "粘贴和风 API Key";
+        setStatus("已清除配置", "muted");
       } catch (err) {
         setStatus(`清除失败：${err?.message ?? err}`, "err");
       } finally {
@@ -91,10 +104,7 @@
       }
     });
 
-    keyInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") saveBtn.click();
-    });
-
+    keyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveBtn.click(); });
     refresh();
   </script>
 </body>

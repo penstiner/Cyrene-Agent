@@ -1,0 +1,145 @@
+/* cyrene-plugin-theme.css — 与 Cyrene 主程序 pearl-white 主题对齐的插件窗口皮肤
+   Token 来源：src/renderer/ui/tokens.css + ui/theme.css + settings/settings.css */
+
+:root {
+  --cy-pink-50: #fff1f6;
+  --cy-pink-100: #ffd6e4;
+  --cy-pink-200: #ffb1cb;
+  --cy-pink-300: #ff7da8;
+  --cy-pink-500: #ff5b8a;
+  --cy-pink-600: #e84a78;
+  --cy-bg-0: #ffffff;
+  --cy-bg-1: #f5f5f7;
+  --cy-bg-2: #fafafc;
+  --cy-text-strong: #1d1d1f;
+  --cy-text: #2c2c2e;
+  --cy-muted: #4f4a57;
+  --cy-faint: #6f6876;
+  --cy-border-faint: rgba(0, 0, 0, 0.06);
+  --cy-border-soft: #e5e5ea;
+  --cy-border-strong: #d2d2d7;
+  --cy-pink-border: rgba(255, 190, 226, 0.36);
+  --cy-ok: #1a9a6c;
+  --cy-danger: #d94a5e;
+  --cy-font-sans: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  --cy-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular,
+    Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--cy-font-sans);
+  font-size: 13px;
+  color: var(--cy-text);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(236, 72, 153, 0.16) 0%, transparent 36%),
+    radial-gradient(circle at 86% 18%, rgba(168, 85, 247, 0.13) 0%, transparent 40%),
+    linear-gradient(145deg, var(--cy-bg-2) 0%, var(--cy-bg-1) 64%, var(--cy-bg-2) 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+.cy-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--cy-pink-border);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(255, 91, 138, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+h1 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--cy-text-strong);
+  letter-spacing: 0.2px;
+}
+
+.cy-hint {
+  color: var(--cy-muted);
+  line-height: 1.65;
+}
+
+.cy-hint a { color: var(--cy-pink-600); text-decoration: none; }
+.cy-hint a:hover { text-decoration: underline; }
+.cy-hint b { color: var(--cy-text-strong); }
+
+.cy-label {
+  display: block;
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--cy-text-strong);
+  margin-bottom: 6px;
+}
+
+.cy-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--cy-border-strong);
+  border-radius: 10px;
+  background: var(--cy-bg-0);
+  color: var(--cy-text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.cy-input:focus {
+  border-color: var(--cy-pink-500);
+  box-shadow: 0 0 0 3px rgba(255, 91, 138, 0.15);
+}
+
+.cy-input::placeholder { color: var(--cy-faint); }
+
+.cy-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--cy-border-strong);
+  border-radius: 10px;
+  background: var(--cy-bg-0);
+  color: var(--cy-text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.cy-btn:hover { border-color: var(--cy-pink-300); }
+.cy-btn:active { transform: translateY(1px); }
+.cy-btn:disabled { opacity: 0.45; cursor: default; }
+
+.cy-btn--primary {
+  background: linear-gradient(135deg, var(--cy-pink-300), var(--cy-pink-500));
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(255, 91, 138, 0.32);
+}
+
+.cy-btn--primary:hover { box-shadow: 0 8px 20px rgba(255, 91, 138, 0.42); }
+
+.cy-btn--ghost-danger {
+  background: transparent;
+  border-color: rgba(217, 74, 94, 0.35);
+  color: var(--cy-danger);
+}
+
+.cy-select {
+  padding: 6px 10px;
+  border: 1px solid var(--cy-border-strong);
+  border-radius: 8px;
+  background: var(--cy-bg-0);
+  color: var(--cy-text);
+  font-family: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.cy-select:focus { border-color: var(--cy-pink-500); }
+
+.cy-status { line-height: 1.55; font-size: 12.5px; }
+.cy-status--ok { color: var(--cy-ok); }
+.cy-status--err { color: var(--cy-danger); }
+.cy-status--muted { color: var(--cy-faint); }

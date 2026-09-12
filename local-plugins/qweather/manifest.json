@@ -1,0 +1,11 @@
+{
+  "apiVersion": 1,
+  "id": "qweather",
+  "name": "和风天气",
+  "version": "0.1.0",
+  "description": "让 Cyrene 能查询详细天气：实时天气、未来三天预报、空气质量、生活指数（和风天气 API）。支持城市与区县级定位。首次使用请点插件卡片的「打开」按钮配置 API Key 与专属 API Host。",
+  "author": "浅梦",
+  "entry": "index.cjs",
+  "defaultEnabled": false,
+  "deps": ["secrets"]
+}

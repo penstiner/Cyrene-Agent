@@ -1,0 +1,11 @@
+{
+  "apiVersion": 1,
+  "id": "amap-explorer",
+  "name": "高德周边探索",
+  "version": "0.1.0",
+  "description": "让 Cyrene 能搜索地点和周边：找餐厅、咖啡店、酒店、景点等好吃好玩的地方（高德地图 API）。支持按中心地点周边搜索并显示距离。首次使用请点插件卡片的「打开」按钮配置 API Key。",
+  "author": "浅梦",
+  "entry": "index.cjs",
+  "defaultEnabled": false,
+  "deps": ["secrets"]
+}

@@ -1,0 +1,10 @@
+{
+  "apiVersion": 1,
+  "id": "log-viewer",
+  "name": "日志查看器",
+  "version": "0.1.0",
+  "description": "在插件窗口里实时预览 Cyrene 的运行日志：按级别（错误/警告）过滤、关键词搜索、自动跟随最新条目，支持 cyrene.log 滚动文件与 TTS 日志。另提供 LLM 查询工具——直接问「最近有什么报错」即可。无需任何 API 配置。",
+  "author": "浅梦",
+  "entry": "index.cjs",
+  "defaultEnabled": false
+}
