@@ -1,0 +1,10 @@
+{
+  "apiVersion": 1,
+  "id": "story-wiki",
+  "name": "剧情库检索",
+  "version": "0.1.0",
+  "description": "让 Cyrene 能检索本地《崩坏：星穹铁道》剧情库（HSRChat wiki：角色/NPC/书籍/任务/语音/光锥官方文本）。问剧情细节、角色背景、台词、设定核对时先查原文再作答，防止记混或编造。数据来自 HSRChat 项目（MIT），首次使用请在插件设置里选择数据目录。",
+  "author": "浅梦",
+  "entry": "index.cjs",
+  "defaultEnabled": false
+}

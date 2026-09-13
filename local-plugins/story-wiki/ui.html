@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-ui-theme="pearl-white">
+<head>
+  <meta charset="UTF-8" />
+  <title>剧情库检索 · 设置</title>
+  <link rel="stylesheet" href="cyrene-theme.css" />
+  <style>
+    body { display: flex; flex-direction: column; padding: 22px; }
+    .card { padding: 22px 24px; display: flex; flex-direction: column; height: 100%; }
+    .hint { margin: 6px 0 16px; }
+    .dir-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; border: 1px solid var(--cy-border-soft);
+      border-radius: 10px; background: rgba(255, 255, 255, 0.7);
+      margin-bottom: 12px;
+    }
+    .dir-path {
+      flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; font-family: var(--cy-font-mono); font-size: 12px;
+      color: var(--cy-text);
+    }
+    .dir-path.empty { color: var(--cy-faint); }
+    .stats { font-size: 12px; color: var(--cy-muted); line-height: 1.7; }
+    .stats b { color: var(--cy-text-strong); }
+    .cats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .cat {
+      padding: 2px 10px; border-radius: 999px; font-size: 11.5px;
+      background: var(--cy-pink-50); color: var(--cy-pink-600);
+      border: 1px solid rgba(255, 91, 138, 0.25);
+    }
+    .actions { display: flex; gap: 10px; margin-top: auto; padding-top: 14px; }
+    .actions .cy-btn { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="card cy-card">
+    <h1>剧情库检索</h1>
+    <p class="cy-hint hint">
+      数据来自开源项目 <a href="https://github.com/XCreeperPa/HSRChat" target="_blank">HSRChat</a>（MIT）——
+      《崩坏：星穹铁道》全量剧情/角色/NPC/书籍官方文本。克隆仓库后选择其中的
+      <b>references/wiki</b> 目录即可。
+    </p>
+
+    <label class="cy-label">数据目录</label>
+    <div class="dir-row">
+      <span class="dir-path empty" id="dir">未配置</span>
+    </div>
+    <div class="stats" id="stats">尚未建立索引</div>
+    <div class="cats" id="cats"></div>
+
+    <div class="actions">
+      <button id="pick" class="cy-btn cy-btn--primary">选择数据目录…</button>
+      <button id="clear" class="cy-btn cy-btn--ghost-danger" disabled>清除配置</button>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require("electron");
+    const CHANNEL = "plugin:story-wiki";
+    const dirEl = document.getElementById("dir");
+    const statsEl = document.getElementById("stats");
+    const catsEl = document.getElementById("cats");
+    const pickBtn = document.getElementById("pick");
+    const clearBtn = document.getElementById("clear");
+
+    async function refresh() {
+      try {
+        const s = await ipcRenderer.invoke(`${CHANNEL}:get-status`);
+        if (s.configured && s.docCount > 0) {
+          dirEl.textContent = s.dir;
+          dirEl.className = "dir-path";
+          statsEl.innerHTML = `已索引 <b>${s.docCount}</b> 个文档`;
+          catsEl.innerHTML = "";
+          for (const c of (s.categories ?? []).slice(0, 12)) {
+            const span = document.createElement("span");
+            span.className = "cat";
+            span.textContent = c;
+            catsEl.append(span);
+          }
+          clearBtn.disabled = false;
+        } else {
+          dirEl.textContent = s.dir || "未配置";
+          dirEl.className = "dir-path empty";
+          statsEl.textContent = s.error || "尚未建立索引";
+          catsEl.innerHTML = "";
+          clearBtn.disabled = !s.configured;
+        }
+      } catch (err) {
+        statsEl.textContent = `读取状态失败：${err?.message ?? err}`;
+      }
+    }
+
+    pickBtn.addEventListener("click", async () => {
+      pickBtn.disabled = true;
+      try {
+        const r = await ipcRenderer.invoke(`${CHANNEL}:pick-dir`);
+        if (r.ok) {
+          statsEl.textContent = `✓ 已设置并索引 ${r.docCount} 个文档`;
+        } else if (!r.canceled) {
+          statsEl.textContent = `设置失败：${r.error ?? "未知错误"}`;
+        }
+      } finally {
+        pickBtn.disabled = false;
+        await refresh();
+      }
+    });
+
+    clearBtn.addEventListener("click", async () => {
+      await ipcRenderer.invoke(`${CHANNEL}:clear-dir`);
+      await refresh();
+    });
+
+    refresh();
+  </script>
+</body>
+</html>
