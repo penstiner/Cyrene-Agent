@@ -41,6 +41,18 @@ FunctionEnd
 ; 阶段把用户内容挪到同级暂存目录，等新版装完后再恢复/合并。
 ; 仅静默安装（应用内更新/定制安装器/独立升级器）时启用：向导模式用户在场，取消安装不留烂摊子。
 !macro customInit
+  ; 路径记忆（私有键，卸载器不会删除）：旧卸载器收尾会删掉 electron-builder 的路径键
+ ; （Software\{GUID}），升级中途异常退出后重装就找不到旧路径。用 Software\Cyrene 自理。
+  Push $0
+  ReadRegStr $0 HKCU "Software\Cyrene" "InstallPath"
+  ${If} $0 == ""
+    ReadRegStr $0 HKLM "Software\Cyrene" "InstallPath"
+  ${EndIf}
+  ${If} $0 != ""
+    StrCpy $INSTDIR $0
+  ${EndIf}
+  Pop $0
+
   ${If} ${Silent}
     CreateDirectory "$INSTDIR\..\.Cyrene.content-preserve"
     ClearErrors
@@ -59,6 +71,9 @@ FunctionEnd
 !macroend
 
 !macro customInstall
+  ; 写路径记忆：见 customInit 注释
+  WriteRegStr SHCTX "Software\Cyrene" "InstallPath" "$INSTDIR"
+
   ; 恢复 customInit 暂存的 models（新版安装器不写 models 目录，原样搬回即可）
   ClearErrors
   ${If} ${FileExists} "$INSTDIR\..\.Cyrene.models-preserve"
