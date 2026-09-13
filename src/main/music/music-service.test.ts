@@ -304,6 +304,77 @@ describe("MusicService (M3 OpenAPI)", () => {
     expect(mpvMocks.setTrack).toHaveBeenCalledWith(expect.objectContaining({ encryptedId: ENC }));
   });
 
+  it("chat playTrackFromUi establishes a single-track session so setPlaybackMode works", async () => {
+    mocks.getSongDetail.mockResolvedValue({ name: "晴天", playUrl: "http://x/y.mp3" });
+    const s = makeService();
+    await s.start();
+    expect(s.getPlaybackSession()).toBeNull();
+
+    await s.playTrackFromUi(ENC);
+    expect(s.getPlaybackSession()).toMatchObject({
+      queue: [{ id: ENC }],
+      queueIndex: 0,
+      playbackMode: "off",
+    });
+
+    // 随后切播放模式：不再是 no_active_queue
+    expect(s.setPlaybackMode("one")).toMatchObject({ playbackMode: "one", queueIndex: 0 });
+  });
+
+  it("chat playTrackFromUi appends a different track and jumps to a queued one", async () => {
+    const ENC2 = "B".repeat(32);
+    mocks.getSongDetail.mockImplementation(async (id: string) => ({ name: `歌-${id[0]}`, playUrl: `http://x/${id}.mp3` }));
+    const s = makeService();
+    await s.start();
+
+    await s.playTrackFromUi(ENC);
+    await s.playTrackFromUi(ENC2);
+    let session = s.getPlaybackSession();
+    expect(session).toMatchObject({ queueIndex: 1 });
+    expect(session?.queue).toHaveLength(2);
+
+    // 再播回第一首：跳转不重复入队
+    await s.playTrackFromUi(ENC);
+    session = s.getPlaybackSession();
+    expect(session).toMatchObject({ queueIndex: 0 });
+    expect(session?.queue).toHaveLength(2);
+  });
+
+  it("chat playTrackFromUi cache hit also establishes the session (local- import included)", async () => {
+    cacheState.files.set(ENC, "C:/cache/enc.mp3");
+    cacheState.records.set(ENC, { encryptedId: ENC, name: "晴天", artists: ["周杰伦"] });
+    const s = makeService();
+    await s.start();
+    await s.playTrackFromUi(ENC);
+    expect(s.getPlaybackSession()).toMatchObject({
+      queue: [{ id: ENC, name: "晴天" }],
+      queueIndex: 0,
+      playbackMode: "off",
+    });
+  });
+
+  it("chat playPlaylist establishes a full-queue session with list-loop default", async () => {
+    mocks.getPlaylistSongs.mockResolvedValue([
+      songRec(),
+      songRec({ id: "B".repeat(32), originalId: 2, name: "搁浅" }),
+      songRec({ id: "C".repeat(32), originalId: 3, name: "七里香" }),
+    ]);
+    mocks.getSongDetail.mockResolvedValue({ name: "晴天", playUrl: "http://x/y.mp3" });
+    const s = makeService();
+    await s.start();
+    (s as unknown as { orchestrator: { setAccountState: (st: string) => void } }).orchestrator.setAccountState("signed_in");
+
+    const r = await s.playPlaylist("a".repeat(32));
+    expect(r.state).toBe("dispatched");
+    expect(s.getPlaybackSession()).toMatchObject({
+      queueIndex: 0,
+      playbackMode: "all",
+    });
+    expect(s.getPlaybackSession()?.queue).toHaveLength(3);
+    // 歌单会话上切单曲循环
+    expect(s.setPlaybackMode("one")?.playbackMode).toBe("one");
+  });
+
   it("playTrackFromUi rejects when no playUrl", async () => {
     mocks.getSongDetail.mockResolvedValue({ name: "晴天", playUrl: "" });
     const s = makeService();

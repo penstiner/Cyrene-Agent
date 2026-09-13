@@ -184,6 +184,13 @@ export class MusicService {
           };
           this.mpv.setTrack(this.currentPlayback);
         }
+        // 播放会话跟派发走：聊天路径（工具播歌/播歌单）由此建立队列；
+        // 面板路径 playSessionTrack 已先同步会话，这里合并为无操作。
+        if (resource.kind === "playlist") {
+          this.syncSessionForPlaylist(resource.tracks);
+        } else if (track) {
+          this.syncSessionForTrack(track);
+        }
         this.playerState = "available";
         this.emitPlayerChange("available");
         // 边播边存：CDN 直链约 20 分钟过期，必须当下并行下载（切歌不取消）
@@ -495,6 +502,42 @@ export class MusicService {
   }
 
   /**
+   * 单曲入会话队列：已在队列 → 跳到该曲（保留队列与模式）；不在 → 追加为当前曲；
+   * 无会话 → 建单曲会话（模式 off，播完即停——循环交给 setPlaybackMode 显式开启）。
+   * 面板路径 playSessionTrack 已先同步过会话，此处合并为无操作，不会重复广播。
+   */
+  private syncSessionForTrack(track: MusicTrack): void {
+    const current = this.playbackSession.snapshot();
+    if (!current) {
+      this.playbackSession.replace({ queue: [track], queueIndex: 0, playbackMode: "off", playlistId: "" });
+      this.emitPlaybackSessionChange();
+      return;
+    }
+    const existingIndex = current.queue.findIndex((t) => t.id === track.id);
+    if (existingIndex === current.queueIndex) return;
+    if (existingIndex >= 0) {
+      this.playbackSession.replace({ ...current, queueIndex: existingIndex });
+    } else {
+      const queue = [...current.queue, track];
+      this.playbackSession.replace({ ...current, queue, queueIndex: queue.length - 1 });
+    }
+    this.emitPlaybackSessionChange();
+  }
+
+  /** 歌单整体入会话：替换队列，队列头开播；沿用现有模式（无会话时默认 all 列表循环）。 */
+  private syncSessionForPlaylist(tracks: MusicTrack[]): void {
+    if (tracks.length === 0) return;
+    const current = this.playbackSession.snapshot();
+    this.playbackSession.replace({
+      queue: [...tracks],
+      queueIndex: 0,
+      playbackMode: current?.playbackMode ?? "all",
+      playlistId: "",
+    });
+    this.emitPlaybackSessionChange();
+  }
+
+  /**
    * 修改当前播放队列的循环模式并广播给音乐窗口（渲染端 applyPlaybackSession 同步 UI 状态）。
    * 只影响后续切歌；没有活动队列（从未同步会话或已清空）时返回 null。
    */
@@ -737,6 +780,15 @@ export class MusicService {
       coverUrl: rec?.coverUrl,
     };
     this.mpv!.setTrack(this.currentPlayback);
+    // 缓存曲目同样进会话队列（含 local- 导入曲目），保证聊天播歌后可切播放模式
+    this.syncSessionForTrack({
+      id: trackId,
+      encryptedId: trackId,
+      name: rec?.name ?? trackId,
+      artists: rec?.artists ?? [],
+      coverUrl: rec?.coverUrl,
+      durationMs: rec?.durationMs,
+    });
     this.playerState = "available";
     this.emitPlayerChange("available");
     console.log("[music-cache] play from cache:", { trackId, name: this.currentPlayback.name });
