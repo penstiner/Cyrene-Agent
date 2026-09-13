@@ -1,4 +1,5 @@
 import type { TaskSessionStatus, TaskSubagentType, TaskTranscriptMessage } from "../../shared/task-session";
+import type { TaskTraceRecord } from "../../shared/task-session";
 import { TaskSessionStore } from "../tasks/task-session-store";
 import { projectTaskTraceEvent } from "./task-events";
 import { getTaskAgentProfile, resolveTaskTools } from "./task-profiles";
@@ -42,6 +43,9 @@ export interface TaskRuntimeParentContext {
   permissionMode?: import("./cyrene-agent").CyreneRunOptions["permissionMode"];
   toolOutputStore?: ToolOutputStore;
 }
+
+/** 增量轨迹事件（reasoning_delta/progress_text）的合并落盘间隔。 */
+const TRACE_FLUSH_MS = 1_000;
 
 function taskStatus(result: HarnessResult): { status: Exclude<TaskSessionStatus, "running" | "interrupted">; error?: { code: string; message: string } } {
   const terminal = result.terminal?.status;
@@ -115,6 +119,35 @@ export function createTaskExecutor(input: {
     };
     input.onLifecycle?.({ ...presentation, status: "running" });
 
+    // ── 轨迹攒批 ──
+    // reasoning_delta / progress_text 等增量事件每秒可达数十次；逐条 checkpoint 会
+    // 全量深克隆会话 + JSON.stringify 整份转录 + 同步写盘并重写索引，直接打满主进程
+    // 事件循环 → 所有窗口一起卡死。改为内存攒批：粗粒度事件立即刷写，
+    // 增量事件最多延迟 TRACE_FLUSH_MS 合并落盘。
+    let traceBuffer: TaskTraceRecord[] = [];
+    let traceFlushTimer: ReturnType<typeof setTimeout> | null = null;
+    const flushTraces = () => {
+      if (traceFlushTimer) {
+        clearTimeout(traceFlushTimer);
+        traceFlushTimer = null;
+      }
+      if (traceBuffer.length === 0) return;
+      const batch = traceBuffer;
+      traceBuffer = [];
+      const current = input.store.get(session.id);
+      if (current) input.store.checkpoint(session.id, { trace: [...current.trace, ...batch] });
+    };
+    const recordTraceEvent: HarnessInput["onEvent"] = (event) => {
+      const trace = projectTaskTraceEvent(event);
+      if (!trace) return;
+      traceBuffer.push(trace);
+      if (event.type === "reasoning_delta" || event.type === "progress_text") {
+        if (!traceFlushTimer) traceFlushTimer = setTimeout(flushTraces, TRACE_FLUSH_MS);
+      } else {
+        flushTraces();
+      }
+    };
+
     try {
       const promptLayers = buildChildPromptLayers(input.parent, profile.systemPrompt);
       const result = await runHarness({
@@ -133,13 +166,7 @@ export function createTaskExecutor(input: {
         toolOutputStore: input.parent.toolOutputStore,
         checkPermission: input.parent.checkPermission,
         includeInteractiveTools: input.parent.includeInteractiveTools,
-        onEvent: (event) => {
-          const trace = projectTaskTraceEvent(event);
-          if (trace) {
-            const current = input.store.get(session.id);
-            if (current) input.store.checkpoint(session.id, { trace: [...current.trace, trace] });
-          }
-        },
+        onEvent: recordTraceEvent,
         onCheckpoint: (checkpoint) => {
           input.store.checkpoint(session.id, {
             messages: checkpoint.messages as TaskTranscriptMessage[],
@@ -147,6 +174,7 @@ export function createTaskExecutor(input: {
           });
         },
       });
+      flushTraces();
       const mapped = taskStatus(result);
       input.store.checkpoint(session.id, {
         status: mapped.status,
@@ -158,6 +186,7 @@ export function createTaskExecutor(input: {
       input.onLifecycle?.({ ...presentation, status: mapped.status });
       return { taskId: session.id, status: mapped.status, text: result.finalAnswer };
     } catch (error) {
+      flushTraces();
       const message = error instanceof Error ? error.message : String(error);
       input.store.checkpoint(session.id, {
         status: input.parent.signal?.aborted ? "cancelled" : "failed",

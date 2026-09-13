@@ -231,4 +231,43 @@ describe("TaskRuntime", () => {
     expect(lifecycle.at(-1)?.status).toBe(expected);
     expect(characterPool.acquire("conversation-1", "风堇").nickname).toBe("风堇");
   });
+
+  it("batches reasoning_delta trace events instead of checkpointing per token", async () => {
+    const store = createStore();
+    const checkpointSpy = vi.spyOn(store, "checkpoint");
+    const runHarness = vi.fn(async (input: any) => {
+      const onEvent = input.onEvent as (event: any) => void;
+      // 模拟流式推理：50 个增量片段 + 一次粗粒度工具结束事件
+      for (let i = 0; i < 50; i += 1) {
+        onEvent({ type: "reasoning_delta", messageId: "m1", delta: `思考片段 ${i}` });
+      }
+      onEvent({ type: "tool_end", toolCallId: "call-1", outcome: "success" });
+      return {
+        finalAnswer: "完成。",
+        finalState: { todoItems: [], uncertainEffects: [] },
+        terminated: false,
+        rounds: 1,
+        terminal: { status: "success" as const, externalEffectsMayContinue: false },
+      };
+    });
+    const execute = createTaskExecutor({ parent, store, runHarness });
+    const result = await execute({
+      description: "长推理任务",
+      prompt: "执行。",
+      subagentType: "general",
+      companionId: "风堇",
+    });
+
+    expect(result.status).toBe("completed");
+    const trace = store.get(result.taskId)?.trace ?? [];
+    expect(trace.filter((t) => t.kind === "reasoning" && t.phase === "delta")).toHaveLength(50);
+    expect(trace.some((t) => t.kind === "tool")).toBe(true);
+    // 旧实现逐 delta 落盘（≥51 次 trace checkpoint，每次全量序列化会话）；
+    // 新实现只在粗粒度事件时合并刷写一次。
+    const traceCheckpoints = checkpointSpy.mock.calls.filter(
+      (call) => (call[1] as { trace?: unknown } | undefined)?.trace !== undefined,
+    );
+    expect(traceCheckpoints).toHaveLength(1);
+    expect(traceCheckpoints[0][1].trace).toHaveLength(51);
+  });
 });
