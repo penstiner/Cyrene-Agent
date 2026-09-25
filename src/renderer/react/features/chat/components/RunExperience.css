@@ -386,9 +386,9 @@
 
 .cy-file-change-card__stat { flex: 0 0 auto; font: 600 12px/1.2 var(--rb-font-mono, monospace); }
 .cy-file-change-card__stat.is-add,
-.cy-file-change-card__row-stats .is-add { color: #1a7f37; }
+.cy-file-change-card__row-stats .is-add { color: var(--cy-diff-add-text); }
 .cy-file-change-card__stat.is-remove,
-.cy-file-change-card__row-stats .is-remove { color: #cf222e; }
+.cy-file-change-card__row-stats .is-remove { color: var(--cy-diff-remove-text); }
 
 .cy-file-change-card__row {
   display: flex;
@@ -418,9 +418,9 @@ button.cy-file-change-card__row:hover { background: #f7f4f6; }
   font: 600 11px/1.3 var(--rb-font-sans, sans-serif);
 }
 
-.cy-file-change-card__kind.is-added { background: #e6ffec; color: #1a7f37; }
-.cy-file-change-card__kind.is-modified { background: #ddf4ff; color: #0550ae; }
-.cy-file-change-card__kind.is-deleted { background: #ffebe9; color: #cf222e; }
+.cy-file-change-card__kind.is-added { background: var(--cy-diff-add-bg); color: var(--cy-diff-add-text); }
+.cy-file-change-card__kind.is-modified { background: var(--cy-diff-hunk-bg); color: #0550ae; }
+.cy-file-change-card__kind.is-deleted { background: var(--cy-diff-remove-bg); color: var(--cy-diff-remove-text); }
 .cy-file-change-card__kind.is-renamed { background: #fff8e6; color: #9a6700; }
 
 .cy-file-change-card__path {
@@ -601,20 +601,20 @@ button.cy-file-change-card__row:hover { background: #f7f4f6; }
 
 .cy-file-change-card__text { min-width: 0; overflow-x: auto; }
 
-.cy-file-change-card__line.is-add { background: #e6ffec; }
+.cy-file-change-card__line.is-add { background: var(--cy-diff-add-bg); }
 .cy-file-change-card__line.is-add .cy-file-change-card__marker,
-.cy-file-change-card__line.is-add .cy-file-change-card__text { color: #116329; }
+.cy-file-change-card__line.is-add .cy-file-change-card__text { color: var(--cy-diff-add-text); }
 
-.cy-file-change-card__line.is-remove { background: #ffebe9; }
+.cy-file-change-card__line.is-remove { background: var(--cy-diff-remove-bg); }
 .cy-file-change-card__line.is-remove .cy-file-change-card__marker,
-.cy-file-change-card__line.is-remove .cy-file-change-card__text { color: #82071e; }
+.cy-file-change-card__line.is-remove .cy-file-change-card__text { color: var(--cy-diff-remove-text); }
 
 .cy-file-change-card__line.is-context .cy-file-change-card__marker,
 .cy-file-change-card__line.is-context .cy-file-change-card__text { color: var(--cy-text-muted, #8b8489); }
 
 .cy-file-change-card__line.is-hunk {
   padding-block: 3px;
-  background: #ddf4ff;
+  background: var(--cy-diff-hunk-bg);
   color: #0550ae;
 }
 

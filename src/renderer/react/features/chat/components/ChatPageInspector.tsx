@@ -1,3 +1,4 @@
+import { useTranslation } from "../../../i18n";
 import { PlanContent, planTabDotClass, planTabLabel, type PlanReviewPhase } from "./PlanReviewPanel";
 import { ReviewDiffContent } from "./ReviewInspector";
 import { RightInspector, type InspectorTab } from "./RightInspector";
@@ -11,6 +12,8 @@ export interface ChatPageInspectorProps {
   activeTabId: ChatPageInspectorTabId;
   onTabChange: (id: ChatPageInspectorTabId) => void;
   onCloseTab: (id: ChatPageInspectorTabId) => void;
+  /** 在面板内切换 diff 文件（chips 导航），同步回 ChatPage 的 reviewInspector.fileIndex */
+  onFileSelect?: (fileIndex: number) => void;
 }
 
 export function ChatPageInspector({
@@ -20,13 +23,21 @@ export function ChatPageInspector({
   activeTabId,
   onTabChange,
   onCloseTab,
+  onFileSelect,
 }: ChatPageInspectorProps) {
+  const { t } = useTranslation();
   const tabs: InspectorTab[] = [];
   if (reviewInspector) {
     tabs.push({
       id: "diff",
-      label: "Diff",
-      content: <ReviewDiffContent runId={reviewInspector.runId} fileIndex={reviewInspector.fileIndex} />,
+      label: t("review.inspectorDiffTab"),
+      content: (
+        <ReviewDiffContent
+          runId={reviewInspector.runId}
+          fileIndex={reviewInspector.fileIndex}
+          onFileSelect={onFileSelect}
+        />
+      ),
     });
   }
   if (activePlan && planDrawerOpen) {

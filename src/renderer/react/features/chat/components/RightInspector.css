@@ -2,7 +2,8 @@
 
 .cy-right-inspector {
   flex-shrink: 0;
-  width: 620px;
+  /* 小窗口自动收窄：960px 最小窗口宽时保证消息区仍有可读宽度（此前固定 620px 会把工作区挤到 ~108px） */
+  width: clamp(420px, 42vw, 620px);
   min-width: 0;
   height: 100%;
   display: flex;
@@ -123,4 +124,17 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+/* 检查器内不受 .cy-message:hover 控制，复制按钮常显 */
+.cy-review-inspector__title-actions .cy-copy-button,
+.cy-plan-content__note-actions .cy-copy-button {
+  opacity: 1;
+  margin-top: 0;
+}
+
+.cy-plan-content__note-actions {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 8px;
 }

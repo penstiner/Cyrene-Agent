@@ -105,6 +105,12 @@
   background: var(--cy-bg-hover, #fff1f6);
 }
 
+/* 当前在右侧检查面板打开的文件 */
+.cy-review-panel__file-item.is-active {
+  background: var(--cy-bg-hover, #fff1f6);
+  box-shadow: inset 2px 0 0 var(--cy-accent);
+}
+
 /* kind 徽标 */
 .cy-review-panel__kind {
   flex-shrink: 0;
@@ -114,12 +120,12 @@
   font-weight: 600;
   line-height: 1.5;
 }
-.cy-review-panel__kind.is-modified { background: #ddf4ff; color: #0550ae; }
-.cy-review-panel__kind.is-created  { background: #e6ffec; color: #116329; }
-.cy-review-panel__kind.is-deleted  { background: #ffebe9; color: #82071e; }
-.cy-review-panel__kind.is-renamed  { background: #ddf4ff; color: #0550ae; }
-.cy-review-panel__kind.is-binary   { background: #f0f0f0; color: #6e7781; }
-.cy-review-panel__kind.is-large    { background: #f0f0f0; color: #6e7781; }
+.cy-review-panel__kind.is-modified { background: var(--cy-diff-hunk-bg); color: #0550ae; }
+.cy-review-panel__kind.is-created  { background: var(--cy-diff-add-bg); color: var(--cy-diff-add-text); }
+.cy-review-panel__kind.is-deleted  { background: var(--cy-diff-remove-bg); color: var(--cy-diff-remove-text); }
+.cy-review-panel__kind.is-renamed  { background: var(--cy-diff-hunk-bg); color: #0550ae; }
+.cy-review-panel__kind.is-binary   { background: var(--cy-diff-neutral-bg); color: var(--cy-diff-neutral-text); }
+.cy-review-panel__kind.is-large    { background: var(--cy-diff-neutral-bg); color: var(--cy-diff-neutral-text); }
 
 /* 文件路径 */
 .cy-review-panel__file-path {

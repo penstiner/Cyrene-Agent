@@ -30,7 +30,7 @@ const KIND_CLASS: Record<ReviewFileChange["kind"], string> = {
   "large-text": "is-large",
 };
 
-function splitPath(filePath: string): { dir: string; base: string } {
+export function splitPath(filePath: string): { dir: string; base: string } {
   const lastSlash = Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\"));
   if (lastSlash < 0) return { dir: "", base: filePath };
   return { dir: filePath.slice(0, lastSlash + 1), base: filePath.slice(lastSlash + 1) };
@@ -38,9 +38,12 @@ function splitPath(filePath: string): { dir: string; base: string } {
 
 export function ReviewPanel({
   runId,
+  activeFileIndex,
   onOpenInspector,
 }: {
   runId: string;
+  /** 当前在右侧检查面板打开的文件下标（属于本 run 时），用于高亮联动 */
+  activeFileIndex?: number;
   onOpenInspector?: (runId: string, fileIndex: number) => void;
 }) {
   const { t } = useTranslation();
@@ -158,11 +161,13 @@ export function ReviewPanel({
         <div className="cy-review-panel__list">
           {snapshot.files.map((file, index) => {
             const { dir, base } = splitPath(file.newPath);
+            const active = index === activeFileIndex;
             return (
               <button
                 key={`${file.kind}:${file.oldPath}:${file.newPath}:${index}`}
                 type="button"
-                className="cy-review-panel__file-item"
+                className={`cy-review-panel__file-item${active ? " is-active" : ""}`}
+                aria-current={active ? "true" : undefined}
                 onClick={() => onOpenInspector?.(runId, index)}
                 title={file.newPath}
               >

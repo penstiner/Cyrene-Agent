@@ -60,12 +60,12 @@
 }
 .cy-review-inspector__hunk-header {
   padding: 4px 14px;
-  color: #0550ae;
+  color: var(--cy-diff-hunk-text);
   font-size: 11px;
   font-weight: 600;
-  background: #ddf4ff;
-  border-top: 1px solid #b6e3ff;
-  border-bottom: 1px solid #b6e3ff;
+  background: var(--cy-diff-hunk-bg);
+  border-top: 1px solid var(--cy-diff-hunk-border);
+  border-bottom: 1px solid var(--cy-diff-hunk-border);
 }
 
 /* diff 行 */
@@ -75,8 +75,8 @@
   min-height: 20px;
   white-space: pre;
 }
-.cy-review-inspector__line.is-add { background: #e6ffec; }
-.cy-review-inspector__line.is-remove { background: #ffebe9; }
+.cy-review-inspector__line.is-add { background: var(--cy-diff-add-bg); }
+.cy-review-inspector__line.is-remove { background: var(--cy-diff-remove-bg); }
 .cy-review-inspector__line.is-context { background: transparent; }
 
 /* 行号列 */
@@ -94,16 +94,16 @@
   text-align: center;
   user-select: none;
 }
-.cy-review-inspector__line.is-add .cy-review-inspector__line-marker { color: #116329; }
-.cy-review-inspector__line.is-remove .cy-review-inspector__line-marker { color: #82071e; }
+.cy-review-inspector__line.is-add .cy-review-inspector__line-marker { color: var(--cy-diff-add-text); }
+.cy-review-inspector__line.is-remove .cy-review-inspector__line-marker { color: var(--cy-diff-remove-text); }
 .cy-review-inspector__line.is-context .cy-review-inspector__line-marker { color: transparent; }
 
 .cy-review-inspector__line-text {
   flex: 1;
   overflow: visible;
 }
-.cy-review-inspector__line.is-add .cy-review-inspector__line-text { color: #116329; }
-.cy-review-inspector__line.is-remove .cy-review-inspector__line-text { color: #82071e; }
+.cy-review-inspector__line.is-add .cy-review-inspector__line-text { color: var(--cy-diff-add-text); }
+.cy-review-inspector__line.is-remove .cy-review-inspector__line-text { color: var(--cy-diff-remove-text); }
 .cy-review-inspector__line.is-context .cy-review-inspector__line-text { color: var(--cy-text-muted, #8b8489); }
 
 /* kind 徽标 */
@@ -115,12 +115,12 @@
   font-weight: 600;
   line-height: 1.4;
 }
-.cy-review-inspector__kind.is-modified { background: #ddf4ff; color: #0550ae; }
-.cy-review-inspector__kind.is-created  { background: #e6ffec; color: #116329; }
-.cy-review-inspector__kind.is-deleted  { background: #ffebe9; color: #82071e; }
-.cy-review-inspector__kind.is-renamed  { background: #ddf4ff; color: #0550ae; }
-.cy-review-inspector__kind.is-binary   { background: #f0f0f0; color: #6e7781; }
-.cy-review-inspector__kind.is-large    { background: #f0f0f0; color: #6e7781; }
+.cy-review-inspector__kind.is-modified { background: var(--cy-diff-hunk-bg); color: var(--cy-diff-hunk-text); }
+.cy-review-inspector__kind.is-created  { background: var(--cy-diff-add-bg); color: var(--cy-diff-add-text); }
+.cy-review-inspector__kind.is-deleted  { background: var(--cy-diff-remove-bg); color: var(--cy-diff-remove-text); }
+.cy-review-inspector__kind.is-renamed  { background: var(--cy-diff-hunk-bg); color: var(--cy-diff-hunk-text); }
+.cy-review-inspector__kind.is-binary   { background: var(--cy-diff-neutral-bg); color: var(--cy-diff-neutral-text); }
+.cy-review-inspector__kind.is-large    { background: var(--cy-diff-neutral-bg); color: var(--cy-diff-neutral-text); }
 
 /* ── 元信息视图 ── */
 .cy-review-inspector__meta {
@@ -146,3 +146,105 @@
   font-size: 12px;
   color: var(--cy-text-muted, #99939a);
 }
+
+/* ── 标题栏操作区：复制 + 刷新 ── */
+.cy-review-inspector__title-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.cy-review-inspector__refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cy-text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.4s ease;
+}
+
+.cy-review-inspector__refresh:hover {
+  background: var(--cy-bg-hover);
+  color: var(--cy-accent);
+}
+
+.cy-review-inspector__refresh:active {
+  transform: rotate(180deg);
+}
+
+/* ── 文件 chips 导航（多文件时显示，点击切换 diff） ── */
+.cy-review-inspector__file-chips {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--cy-border, #f0ebee);
+  background: var(--cy-bg-workspace, #FFFBFC);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.cy-review-inspector__chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--cy-border, #f0ebee);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font: 400 11px/1.3 var(--rb-font-sans, sans-serif);
+  color: var(--cy-text-secondary);
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.cy-review-inspector__chip:hover {
+  border-color: var(--cy-pill-border, #ff9fbd);
+  color: var(--cy-text);
+}
+
+.cy-review-inspector__chip.is-active {
+  border-color: var(--cy-accent);
+  background: var(--cy-bg-hover);
+  color: var(--cy-text);
+}
+
+.cy-review-inspector__chip-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+}
+
+.cy-review-inspector__chip-dot.is-modified,
+.cy-review-inspector__chip-dot.is-renamed { background: var(--cy-diff-hunk-text); }
+.cy-review-inspector__chip-dot.is-created { background: var(--cy-diff-add-text); }
+.cy-review-inspector__chip-dot.is-deleted { background: var(--cy-diff-remove-text); }
+.cy-review-inspector__chip-dot.is-binary,
+.cy-review-inspector__chip-dot.is-large { background: var(--cy-diff-neutral-text); }
+
+.cy-review-inspector__chip-base {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--rb-font-mono, monospace);
+}
+
+.cy-review-inspector__chip-stats {
+  display: inline-flex;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cy-review-inspector__chip-stats .is-add { color: var(--cy-diff-add-text); }
+.cy-review-inspector__chip-stats .is-remove { color: var(--cy-diff-remove-text); }

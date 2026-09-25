@@ -6,6 +6,7 @@
 
 import { t, useTranslation } from "../../../i18n";
 import { MarkdownContent } from "./ChatMessageList";
+import { CopyButton } from "./CopyButton";
 
 export type PlanReviewPhase = "review" | "executing" | "completed";
 
@@ -44,7 +45,12 @@ export function PlanContent({
   const { t } = useTranslation();
   return (
     <div className="cy-plan-content">
-      <p className="cy-plan-content__note">{t(PHASE_NOTE_KEYS[phase])}</p>
+      <p className="cy-plan-content__note">
+        {t(PHASE_NOTE_KEYS[phase])}
+        <span className="cy-plan-content__note-actions">
+          <CopyButton text={content} size={13} />
+        </span>
+      </p>
       <div className="cy-plan-content__body">
         <MarkdownContent content={content} />
       </div>

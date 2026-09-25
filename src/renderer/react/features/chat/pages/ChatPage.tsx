@@ -132,6 +132,8 @@ export function ChatPage() {
     Record<string, { content: string; planPath: string; phase: PlanReviewPhase }>
   >({});
   const [planDrawerOpen, setPlanDrawerOpen] = useState(false);
+  // 右侧面板是否已打开（diff 或 plan 任一）：plan.review 事件据此决定是否抢占 tab
+  const inspectorOpenRef = useRef(false);
   const [interruptedRun, setInterruptedRun] = useState<{ runId: string; rounds: number; todoCount: number } | null>(null);
   // 会话守卫冲突（SESSION_RUN_ACTIVE）：主进程拒绝了并发 run，
   // 等用户决定是否终止旧 run 并接管重开本轮。仅 UX 层；正确性由主进程守卫保证。
@@ -141,6 +143,9 @@ export function ChatPage() {
     retry: () => Promise<void>;
   } | null>(null);
   const activeModeRef = useRef(mode);
+  useEffect(() => {
+    inspectorOpenRef.current = reviewInspector !== null || planDrawerOpen;
+  }, [reviewInspector, planDrawerOpen]);
   const activeSessionIdsRef = useRef(activeSessionIds);
   const activeScopeRef = useRef(`mode:${mode}`);
   const sessionSelectionGeneration = useRef(0);
@@ -299,6 +304,10 @@ export function ChatPage() {
   } | null>(null);
 
   const activeSessionId = activeSessionIds[mode];
+  // 切换会话时关闭不属于自己的 Review diff 面板：runId 归属旧会话，留着会串台
+  useEffect(() => {
+    setReviewInspector(null);
+  }, [activeSessionId]);
   const scopeKey = activeSessionId ?? `mode:${mode}`;
   const draft = drafts[scopeKey] ?? "";
   const messages = activeSessionId ? (messagesBySession[activeSessionId] ?? []) : [];
@@ -507,7 +516,8 @@ export function ChatPage() {
               },
             }));
             setPlanDrawerOpen(true);
-            setInspectorTab("plan");
+            // 仅当右侧面板完全未打开时自动切到 plan tab；用户正读 diff 时不打断
+            if (!inspectorOpenRef.current) setInspectorTab("plan");
           }
           break;
         case "cyrene.plan.approved":
@@ -1417,6 +1427,7 @@ export function ChatPage() {
               setReviewInspector({ runId, fileIndex });
               setInspectorTab("diff");
             }}
+            activeReviewFile={reviewInspector}
           />
         )}
         <ContextCompressionNotice visible={isCompressingContext} />
@@ -1551,6 +1562,9 @@ export function ChatPage() {
             setPlanDrawerOpen(false);
             if (reviewInspector) setInspectorTab("diff");
           }
+        }}
+        onFileSelect={(fileIndex: number) => {
+          setReviewInspector((current) => (current ? { ...current, fileIndex } : current));
         }}
       />
     </div>

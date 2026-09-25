@@ -409,7 +409,11 @@
     "restoreRunning": "Restoring…",
     "restoreDone": "Restored {{count}} files",
     "restorePartial": "Restored {{restored}}, skipped {{skipped}}, failed {{failed}}",
-    "restoreFailed": "Restore failed: {{reason}}"
+    "restoreFailed": "Restore failed: {{reason}}",
+    "inspectorDiffTab": "Diff",
+    "unavailable": "Snapshot unavailable",
+    "fileListAria": "Changed files",
+    "refreshDiff": "Reload changes"
   },
   "planReview": {
     "noteReview": "Review the plan, then decide in the card above",

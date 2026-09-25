@@ -1,11 +1,14 @@
 // ReviewDiffContent — Review diff 内容（由 RightInspector 容器承载）。
 //
-// 职责：只显示被选中那一个文件的 inline diff 视图 + 文件名标题条。
-// 文件列表在气泡内的 ReviewPanel 中，用户在那里点哪个文件，这里就显示哪个文件的 diff。
+// 职责：文件 chips 导航 + 被选中文件的 inline diff 视图 + 文件名标题条。
+// 文件列表同时存在于气泡内的 ReviewPanel；两侧选中文件通过 ChatPage 的
+// reviewInspector 状态互相同步（点 chips / 点气泡文件行都更新同一状态）。
 // 外层 aside / tab 栏 / 关闭按钮由 RightInspector 统一提供。
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../../../i18n";
+import { CopyButton } from "./CopyButton";
+import { splitPath } from "./ReviewPanel";
 import type { ReviewFileChange, ReviewLine, ReviewSnapshot } from "../../../../../shared/review-types";
 import "./ReviewInspector.css";
 
@@ -28,18 +31,44 @@ const KIND_CLASS: Record<ReviewFileChange["kind"], string> = {
   "large-text": "is-large",
 };
 
+/** 把结构化 hunk 拼回 unified diff 文本，供复制。 */
+function buildPatchText(file: ReviewFileChange): string {
+  const lines: string[] = [
+    `--- ${file.oldPath || file.newPath}`,
+    `+++ ${file.newPath}`,
+  ];
+  for (const hunk of file.hunks ?? []) {
+    lines.push(`@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`);
+    for (const line of hunk.lines) {
+      const marker = line.type === "add" ? "+" : line.type === "remove" ? "-" : " ";
+      lines.push(`${marker}${line.text}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 export function ReviewDiffContent({
   runId,
   fileIndex,
+  onFileSelect,
 }: {
   runId: string;
   fileIndex: number;
+  onFileSelect?: (fileIndex: number) => void;
 }) {
   const { t } = useTranslation();
   const [snapshot, setSnapshot] = useState<ReviewSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reloadToken, setReloadToken] = useState(0);
 
+  // 与气泡内 ReviewPanel 相同的重试策略（3 × 500ms）：run 结束与快照落盘之间可能有延迟；
+  // 重试耗尽后展示「不可用」而不是永远停在加载中
   useEffect(() => {
     let cancelled = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 500;
+    setLoading(true);
     const fetchData = async () => {
       if (cancelled) return;
       try {
@@ -47,17 +76,32 @@ export function ReviewDiffContent({
         if (cancelled) return;
         if (result && result.files.length > 0) {
           setSnapshot(result);
+          setLoading(false);
           return;
         }
       } catch {
-        // 忽略
+        // 忽略，进入重试
       }
+      retryCount += 1;
+      if (retryCount < MAX_RETRIES && !cancelled) {
+        window.setTimeout(() => void fetchData(), RETRY_DELAY);
+        return;
+      }
+      if (!cancelled) setLoading(false);
     };
     void fetchData();
     return () => { cancelled = true; };
-  }, [runId]);
+  }, [runId, reloadToken]);
 
-  const file = snapshot?.files[fileIndex];
+  const files = snapshot?.files ?? [];
+  const file = files[fileIndex];
+
+  const refresh = useCallback(() => {
+    setSnapshot(null);
+    setReloadToken((token) => token + 1);
+  }, []);
+
+  const patchText = useMemo(() => (file ? buildPatchText(file) : ""), [file]);
 
   return (
     <div className="cy-review-diff-content">
@@ -67,10 +111,49 @@ export function ReviewDiffContent({
             {t(KIND_LABEL_KEYS[file.kind])}
           </span>
         )}
-        <span className="cy-review-inspector__title-text">{file?.newPath ?? t("common.loading")}</span>
+        <span className="cy-review-inspector__title-text">
+          {file?.newPath ?? (loading ? t("common.loading") : t("review.unavailable"))}
+        </span>
+        <span className="cy-review-inspector__title-actions">
+          {file && <CopyButton text={patchText} size={14} />}
+          <button type="button" className="cy-review-inspector__refresh" onClick={refresh} aria-label={t("review.refreshDiff")}>
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path d="M13.5 8a5.5 5.5 0 1 1-1.61-3.89M13.5 1.5v3h-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+            </svg>
+          </button>
+        </span>
       </div>
+      {files.length > 1 && (
+        <div className="cy-review-inspector__file-chips" aria-label={t("review.fileListAria")}>
+          {files.map((chipFile, index) => {
+            const { base } = splitPath(chipFile.newPath);
+            const active = index === fileIndex;
+            return (
+              <button
+                key={`${chipFile.kind}:${chipFile.newPath}:${index}`}
+                type="button"
+                aria-current={active ? "true" : undefined}
+                className={`cy-review-inspector__chip${active ? " is-active" : ""}`}
+                onClick={() => onFileSelect?.(index)}
+                title={chipFile.newPath}
+              >
+                <span className={`cy-review-inspector__chip-dot ${KIND_CLASS[chipFile.kind]}`} aria-hidden="true" />
+                <span className="cy-review-inspector__chip-base">{base}</span>
+                <span className="cy-review-inspector__chip-stats">
+                  {chipFile.additions > 0 && <span className="is-add">+{chipFile.additions}</span>}
+                  {chipFile.deletions > 0 && <span className="is-remove">−{chipFile.deletions}</span>}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="cy-review-inspector__body">
-        {!file && <div className="cy-review-inspector__loading">{t("common.loading")}</div>}
+        {!file && (
+          <div className="cy-review-inspector__loading">
+            {loading ? t("common.loading") : t("review.unavailable")}
+          </div>
+        )}
         {file && <DiffView file={file} />}
       </div>
     </div>

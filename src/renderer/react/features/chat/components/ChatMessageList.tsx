@@ -103,6 +103,8 @@ interface ChatMessageListProps {
   onRegisterScrollToBottom?: (scroll: () => void) => void;
   /** 点击 Review 文件项时打开右侧检查面板 */
   onOpenReviewInspector?: (runId: string, fileIndex: number) => void;
+  /** 当前在右侧检查面板打开的 Review 文件，用于气泡内文件列表的高亮联动 */
+  activeReviewFile?: { runId: string; fileIndex: number } | null;
 }
 
 const markdownConfig = { extensions: Latex() };
@@ -884,6 +886,7 @@ function createRoles(
   onReasoningExpand: (id: string, expanded: boolean) => void,
   onTtsCacheKey?: (messageId: string, cacheKey: string, converterVersion: string) => void,
   onOpenReviewInspector?: (runId: string, fileIndex: number) => void,
+  activeReviewFile?: { runId: string; fileIndex: number } | null,
 ) {
   return {
   user: {
@@ -1059,7 +1062,11 @@ function createRoles(
     rootClassName: "cy-message cy-message--review",
     contentRender: (_content: string, info: { extraInfo?: { runId?: string } }) => (
       info.extraInfo?.runId
-        ? <ReviewPanel runId={info.extraInfo.runId} onOpenInspector={onOpenReviewInspector} />
+        ? <ReviewPanel
+            runId={info.extraInfo.runId}
+            activeFileIndex={activeReviewFile?.runId === info.extraInfo.runId ? activeReviewFile.fileIndex : undefined}
+            onOpenInspector={onOpenReviewInspector}
+          />
         : null
     ),
   },
@@ -1207,6 +1214,7 @@ export function ChatMessageList({
   onScrollToBottomVisibilityChange,
   onRegisterScrollToBottom,
   onOpenReviewInspector,
+  activeReviewFile,
 }: ChatMessageListProps) {
   const userAvatarUrl = useUserAvatar();
   const [enabledStickers, setEnabledStickers] = useState<EnabledSticker[]>([]);
@@ -1302,8 +1310,9 @@ export function ChatMessageList({
       onReasoningExpand,
       onTtsCacheKey,
       onOpenReviewInspector,
+      activeReviewFile,
     ),
-    [beginEdit, cancelEdit, conversationId, editingMessageId, lastTurn, mode, onOpenReviewInspector, onReasoningExpand, onTtsCacheKey, preferredAddress, reasoningExpanded, regenerate, revisionBusy, submitEdit, userAvatarUrl],
+    [activeReviewFile, beginEdit, cancelEdit, conversationId, editingMessageId, lastTurn, mode, onOpenReviewInspector, onReasoningExpand, onTtsCacheKey, preferredAddress, reasoningExpanded, regenerate, revisionBusy, submitEdit, userAvatarUrl],
   );
 
   useEffect(() => {

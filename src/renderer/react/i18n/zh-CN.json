@@ -409,7 +409,11 @@
     "restoreRunning": "正在恢复…",
     "restoreDone": "已恢复 {{count}} 个文件",
     "restorePartial": "恢复 {{restored}} 个，跳过 {{skipped}} 个，失败 {{failed}} 个",
-    "restoreFailed": "恢复失败：{{reason}}"
+    "restoreFailed": "恢复失败：{{reason}}",
+    "inspectorDiffTab": "文件变更",
+    "unavailable": "快照不可用",
+    "fileListAria": "变更文件列表",
+    "refreshDiff": "重新加载变更"
   },
   "planReview": {
     "noteReview": "请审阅计划内容后在对话中的卡片里决定",

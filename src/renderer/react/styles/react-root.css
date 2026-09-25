@@ -32,6 +32,17 @@
   --cy-shadow-bubble-accent: 2px 2px 4px rgba(255, 91, 138, 0.12), 3px 7px 16px rgba(255, 91, 138, 0.16);
   --cy-shadow-control-hover: 2px 2px 5px rgba(31, 35, 48, 0.075), 3px 8px 18px rgba(31, 35, 48, 0.065);
   --cy-shadow-control-focus: 0 0 0 3px rgba(255, 91, 138, 0.10), 2px 6px 16px rgba(31, 35, 48, 0.08);
+
+  /* Diff 审查色板（右侧检查器 / Review 卡 / 文件变更卡共用，GitHub 风格） */
+  --cy-diff-hunk-bg: #ddf4ff;
+  --cy-diff-hunk-border: #b6e3ff;
+  --cy-diff-hunk-text: #0550ae;
+  --cy-diff-add-bg: #e6ffec;
+  --cy-diff-add-text: #116329;
+  --cy-diff-remove-bg: #ffebe9;
+  --cy-diff-remove-text: #82071e;
+  --cy-diff-neutral-bg: #f0f0f0;
+  --cy-diff-neutral-text: #6e7781;
 }
 
 html, body {

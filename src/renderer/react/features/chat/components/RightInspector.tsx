@@ -4,7 +4,7 @@
 //
 // 设计依据：ReviewInspector 的挤出式 aside 布局，扩展为多 tab。
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useTranslation } from "../../../i18n";
 import "./RightInspector.css";
 
@@ -28,6 +28,14 @@ export function RightInspector({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  // Escape 关闭面板；消息编辑器等先处理 Escape 并 preventDefault 的场景不抢
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
   if (tabs.length === 0) return null;
   const active = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
   const showTabs = tabs.length > 1;
