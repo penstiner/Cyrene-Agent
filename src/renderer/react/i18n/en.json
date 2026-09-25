@@ -79,6 +79,10 @@
       "monthDay": "{{month}}/{{day}}",
       "fullDate": "{{year}}/{{month}}/{{day}}"
     },
+    "codeCollapse": {
+      "expand": "Expand code",
+      "collapse": "Collapse code"
+    },
     "modelWaitAria": "Waiting for model response",
     "modelWaitText": "Waiting for the model to respond…",
     "thinkingTitle": "Thinking…",

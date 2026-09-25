@@ -79,6 +79,10 @@
       "monthDay": "{{month}}月{{day}}日",
       "fullDate": "{{year}}年{{month}}月{{day}}日"
     },
+    "codeCollapse": {
+      "expand": "展开代码",
+      "collapse": "收起代码"
+    },
     "modelWaitAria": "等待模型响应",
     "modelWaitText": "昔涟正在等模型回应…",
     "thinkingTitle": "正在思考…",

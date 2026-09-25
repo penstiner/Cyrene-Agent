@@ -1,6 +1,9 @@
 import { Bubble, CodeHighlighter, Think, ThoughtChain, type BubbleItemType } from "@ant-design/x";
 import { XMarkdown, type ComponentProps } from "@ant-design/x-markdown";
 import Latex from "@ant-design/x-markdown/plugins/Latex";
+import { Image as AntImage } from "antd";
+// mhchem 化学方程式扩展：依赖包内的 katex 与 x-markdown Latex 插件解析到同一实例（npm 去重后同源）
+import "katex/contrib/mhchem";
 import { Component, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ErrorInfo, type KeyboardEvent, type ReactNode } from "react";
 import { t, useTranslation } from "../../../i18n";
 import { normalizeModelMarkdown } from "./markdown-normalize";
@@ -120,13 +123,75 @@ function MarkdownCode({ children, lang, block }: ComponentProps<{ children?: Rea
     return <SvgCardBlock code={source} streaming={streaming} />;
   }
   return (
-    <CodeHighlighter lang={(lang ?? "text").split(/\s+/)[0]} prismLightMode={false}>
-      {source}
-    </CodeHighlighter>
+    <CollapsibleCodeBlock>
+      <CodeHighlighter lang={(lang ?? "text").split(/\s+/)[0]} prismLightMode={false}>
+        {source}
+      </CodeHighlighter>
+    </CollapsibleCodeBlock>
   );
 }
 
-const markdownComponents = { code: MarkdownCode };
+/** 长代码折叠阈值（px）：超过后渐隐遮罩 + 展开/收起按钮。 */
+const CODE_COLLAPSE_THRESHOLD = 360;
+
+function CollapsibleCodeBlock({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const check = () => setOverflowing(el.scrollHeight > CODE_COLLAPSE_THRESHOLD + 60);
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const collapsed = overflowing && !expanded;
+  return (
+    <div className={`cy-code-collapse${collapsed ? " is-collapsed" : ""}`}>
+      <div
+        ref={bodyRef}
+        className="cy-code-collapse__body"
+        style={collapsed ? { maxHeight: CODE_COLLAPSE_THRESHOLD } : undefined}
+      >
+        {children}
+      </div>
+      {overflowing && (
+        <div className="cy-code-collapse__overlay">
+          <div className="cy-code-collapse__fade" aria-hidden="true" />
+          <button
+            type="button"
+            className="cy-code-collapse__toggle"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? t("messageList.codeCollapse.collapse") : t("messageList.codeCollapse.expand")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** markdown 图片：统一圆角边框，点击放大（antd Image 预览层）。 */
+function MarkdownImage({ src, alt }: ComponentProps<{ src?: string; alt?: string }>) {
+  if (!src) return null;
+  return (
+    <AntImage
+      className="cy-message-markdown__image"
+      src={src}
+      alt={alt ?? ""}
+      loading="lazy"
+      draggable={false}
+    />
+  );
+}
+
+const markdownComponents = { code: MarkdownCode, img: MarkdownImage };
 const completedMarkdownOptions = {
   hasNextChunk: false,
   enableAnimation: false,
@@ -670,6 +735,7 @@ function UserAttachments({ attachments }: { attachments: ChatMessageAttachment[]
 
 function AttachmentImage({ attachment }: { attachment: ChatMessageAttachment }) {
   const [src, setSrc] = useState(attachment.previewUrl);
+  const [previewOpen, setPreviewOpen] = useState(false);
   // blob: 预览 URL 只在当前页面有效，聊天记录持久化后刷新必失效；只允许一次磁盘重读兜底
   const diskFallbackTriedRef = useRef(false);
 
@@ -701,7 +767,29 @@ function AttachmentImage({ attachment }: { attachment: ChatMessageAttachment }) 
     readFromDisk();
   }
 
-  return <img src={src} alt={attachment.name} draggable={false} onError={handleImageError} />;
+  return (
+    <>
+      <img
+        src={src}
+        alt={attachment.name}
+        draggable={false}
+        className="is-zoomable"
+        onClick={() => setPreviewOpen(true)}
+        onError={handleImageError}
+      />
+      {/* 隐藏的 Image 仅承载 antd 预览层；展示仍用原生 img 以保留磁盘重读兜底 */}
+      <AntImage
+        src={src}
+        alt={attachment.name}
+        style={{ display: "none" }}
+        preview={{
+          visible: previewOpen,
+          src,
+          onVisibleChange: setPreviewOpen,
+        }}
+      />
+    </>
+  );
 }
 
 function UserContent({

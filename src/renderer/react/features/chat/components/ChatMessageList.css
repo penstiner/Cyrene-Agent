@@ -857,6 +857,16 @@
   padding-block: 4px;
 }
 
+/* 行内公式：Latex 插件对行内公式也用 displayMode 渲染，压掉 display 块的
+   默认外边距与块级基线，避免中文混排时行高跳动 */
+.cy-message-markdown .inline-katex {
+  vertical-align: middle;
+}
+
+.cy-message-markdown .inline-katex .katex-display {
+  margin: 0;
+}
+
 .cy-message-markdown > :first-child {
   margin-top: 0;
 }
@@ -871,28 +881,122 @@
 
 .cy-message-markdown blockquote {
   margin: 10px 0;
-  padding-left: 12px;
-  border-left: 3px solid #ffc0d2;
-  color: #686868;
+  padding: 6px 12px;
+  border-left: 3px solid var(--md-quote-border);
+  border-radius: 0 8px 8px 0;
+  background: var(--md-quote-bg);
+  color: var(--cy-text-secondary);
 }
 
 .cy-message-markdown :not(pre) > code {
   padding: 2px 5px;
   border-radius: 5px;
-  background: #f5f5f5;
-  color: #d73a72;
+  background: var(--md-inline-code-bg);
+  color: var(--md-inline-code-text);
   font-family: Consolas, "Cascadia Code", monospace;
 }
 
+/* 宽表横向滚动：display block 让表格元素自身成为滚动容器（GitHub 式处理） */
 .cy-message-markdown table {
-  width: 100%;
+  display: block;
+  width: fit-content;
+  min-width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
+  border: 1px solid var(--md-table-border);
+  border-radius: 8px;
 }
 
 .cy-message-markdown th,
 .cy-message-markdown td {
   padding: 7px 10px;
-  border: 1px solid #e7e7e7;
+  border: 1px solid var(--md-table-border);
+}
+
+.cy-message-markdown th {
+  background: var(--md-inline-code-bg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cy-message-markdown tbody tr:nth-child(2n) td {
+  background: rgb(0 0 0 / 2%);
+}
+
+/* GFM 任务列表勾选态：已完成项弱化 + 删除线（计划面板曾单独定义，现全局生效） */
+.cy-message-markdown li:has(> input[type="checkbox"]:checked) {
+  color: var(--cy-text-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgb(0 0 0 / 22%);
+}
+
+.cy-message-markdown input[type="checkbox"] {
+  accent-color: var(--cy-accent);
+}
+
+/* markdown 图片：圆角细边框，antd Image 提供点击放大 */
+.cy-message-markdown .ant-image {
+  max-width: 100%;
+}
+
+.cy-message-markdown .ant-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.5em 0;
+  border: 1px solid var(--cy-border);
+  border-radius: 10px;
+}
+
+/* 用户附件图可点击放大 */
+.cy-message__image-attachment img.is-zoomable {
+  cursor: zoom-in;
+}
+
+/* 长代码折叠 */
+.cy-code-collapse {
+  position: relative;
+}
+
+.cy-code-collapse__body {
+  overflow: hidden;
+}
+
+.cy-code-collapse__overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 72px;
+  pointer-events: none;
+}
+
+.cy-code-collapse__fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgb(255 255 255 / 0%), rgb(255 255 255 / 92%));
+}
+
+.cy-code-collapse__toggle {
+  position: relative;
+  margin-bottom: 10px;
+  padding: 4px 14px;
+  border: 1px solid var(--cy-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--cy-text-secondary);
+  cursor: pointer;
+  font: 500 12px/1.4 var(--rb-font-sans, sans-serif);
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgb(31 35 48 / 10%);
+  transition: color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cy-code-collapse__toggle:hover {
+  color: var(--cy-accent);
+  box-shadow: 0 3px 10px rgb(255 91 138 / 18%);
 }
 
 .cy-copy-button {
