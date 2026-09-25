@@ -9,7 +9,7 @@
   border-radius: 6px;
   color: var(--cy-text-muted);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--cy-motion-fast, 150ms) ease, color var(--cy-motion-fast, 150ms) ease;
 }
 
 .cy-sidebar-toggle:hover {
@@ -27,7 +27,7 @@
 
 /* 竖线 */
 .cy-sidebar-line {
-  transition: d 0.25s ease;
+  transition: d var(--cy-motion-base, 220ms) var(--cy-ease-out, ease);
 }
 
 .cy-sidebar-toggle.is-hovered .cy-sidebar-line {
@@ -38,7 +38,7 @@
 .cy-sidebar-chevron {
   opacity: 0;
   transform-origin: 30px 24px;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity var(--cy-motion-base, 220ms) var(--cy-ease-out, ease), transform var(--cy-motion-base, 220ms) var(--cy-ease-out, ease);
 }
 
 .cy-sidebar-toggle.is-hovered .cy-sidebar-chevron {

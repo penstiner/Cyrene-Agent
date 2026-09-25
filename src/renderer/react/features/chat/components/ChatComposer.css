@@ -29,7 +29,7 @@
   flex-direction: column;
   overflow: hidden;
   border-radius: 22px;
-  background: #f4f4f4;
+  background: var(--cy-composer-bg);
   box-shadow: var(--cy-shadow-bubble-neutral);
 }
 
@@ -73,7 +73,7 @@
 }
 
 .cy-composer .ant-sender-input::placeholder {
-  color: #969696;
+  color: var(--cy-text-muted);
 }
 
 .cy-composer .ant-sender-actions-list {
@@ -89,8 +89,8 @@
 }
 
 .cy-composer .ant-sender-actions-btn:disabled {
-  color: #aaa;
-  background: #e7e7e7;
+  color: var(--cy-text-muted);
+  background: var(--cy-border);
 }
 
 .cy-composer__queue {
@@ -99,7 +99,7 @@
   gap: 6px;
   width: 100%;
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--cy-border);
 }
 
 .cy-composer__queue-item {
@@ -108,8 +108,8 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.65);
-  background: rgba(0, 0, 0, 0.03);
+  color: var(--cy-text-secondary);
+  background: var(--cy-surface-muted);
   border-radius: 8px;
   padding: 6px 8px;
 }
@@ -132,13 +132,13 @@
   border-radius: 4px;
   padding: 0;
   background: transparent;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--cy-text-muted);
   cursor: pointer;
 }
 
 .cy-composer__queue-item button:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.75);
+  background: rgb(0 0 0 / 6%);
+  color: var(--cy-text-secondary);
 }
 
 .cy-composer__icon-button,
@@ -147,7 +147,7 @@
   appearance: none;
   border: 0;
   background: transparent;
-  color: #363636;
+  color: var(--cy-text-secondary);
   font: 500 13px/1 var(--rb-font-sans, sans-serif);
   cursor: pointer;
 }
@@ -171,7 +171,7 @@
 }
 
 .cy-composer__icon-button:disabled {
-  color: #aaa;
+  color: var(--cy-text-muted);
   cursor: wait;
 }
 
@@ -187,7 +187,7 @@
   width: 20px;
   height: 20px;
   fill: none;
-  stroke: #333;
+  stroke: var(--cy-text);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -215,7 +215,7 @@
   padding: 5px 8px;
   border: 1px solid var(--cy-border);
   border-radius: 10px;
-  background: #f7f7f7;
+  background: var(--cy-surface-muted);
   color: var(--cy-text);
   font: 500 12px/1.2 var(--rb-font-sans, sans-serif);
 }
@@ -235,7 +235,7 @@
   height: 58px;
   padding: 0;
   overflow: hidden;
-  background: #eee;
+  background: var(--cy-surface-muted);
 }
 
 .cy-composer__attachment--sticker {
@@ -245,7 +245,7 @@
   height: 58px;
   padding: 0;
   overflow: hidden;
-  background: #fff8fa;
+  background: var(--cy-pink-wash);
 }
 
 .cy-composer__attachment--sticker img {
@@ -292,7 +292,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #888;
+  color: var(--cy-text-muted);
   font: 500 16px/18px sans-serif;
   cursor: pointer;
 }
@@ -323,13 +323,13 @@
   padding: 5px;
   border: 1px solid transparent;
   border-radius: 11px;
-  background: #f7f7f7;
+  background: var(--cy-surface-muted);
   cursor: pointer;
 }
 
 .cy-sticker-picker button:hover {
-  border-color: #ffc0d2;
-  background: #fff1f5;
+  border-color: var(--cy-pill-border);
+  background: var(--cy-bg-hover);
 }
 
 .cy-sticker-picker img {
@@ -374,15 +374,15 @@
 }
 
 .cy-composer__footer-button:disabled {
-  color: #828282;
+  color: var(--cy-text-muted);
   cursor: default;
 }
 
 .cy-composer__footer-button--placeholder small {
   padding: 2px 4px;
   border-radius: 5px;
-  background: #ececec;
-  color: #898989;
+  background: var(--cy-border);
+  color: var(--cy-text-muted);
   font: 600 9px/1 var(--rb-font-sans, sans-serif);
   letter-spacing: .04em;
 }
@@ -402,7 +402,7 @@
 .cy-composer__footer .cy-composer__code-folder-icon,
 .cy-composer__footer .cy-composer__terminal-folder-icon {
   fill: none;
-  stroke: #333;
+  stroke: var(--cy-text);
   stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -424,7 +424,7 @@
   width: 1px;
   height: 16px;
   margin: 0 2px;
-  background: #ddd;
+  background: var(--cy-border);
 }
 
 /* 弹性空白：把右侧控件组（上下文环/思考控制）推到 footer 最右端。 */
@@ -434,5 +434,5 @@
 
 .cy-model-selector__menu { min-width: 210px; display: grid; gap: 4px; }
 .cy-model-selector__menu button { border: 0; background: transparent; text-align: left; padding: 8px; border-radius: 8px; cursor: pointer; display: grid; gap: 2px; }
-.cy-model-selector__menu button:hover { background: #fff0f5; }
-.cy-model-selector__menu small { color: #8d7c83; }
+.cy-model-selector__menu button:hover { background: var(--cy-bg-hover); }
+.cy-model-selector__menu small { color: var(--cy-text-muted); }

@@ -25,12 +25,13 @@
   font-weight: 500;
   cursor: pointer;
   position: relative;
-  transition: color 0.2s ease;
+  transition: color var(--cy-motion-fast, 150ms) ease, background var(--cy-motion-fast, 150ms) ease;
   white-space: nowrap;
 }
 
 .cy-segment:hover:not(.is-active) {
   color: #1d1d1f;
+  background: rgb(0 0 0 / 4%);
 }
 
 .cy-segment.is-active {

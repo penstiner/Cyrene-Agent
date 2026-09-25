@@ -20,6 +20,32 @@
   /* 气泡 */
   --cy-bubble-assistant-bg: #f7f7f7;
   --cy-bubble-assistant-border: rgb(31 35 48 / 7%);
+
+  /* 输入框外壳 */
+  --cy-composer-bg: #f4f4f4;
+
+  /* 品牌粉中间调：思考/执行过程的装饰色与 Mermaid/SVG 卡片 */
+  --cy-pink-ink: #b15b8a;
+  --cy-pink-ink-strong: #a5527d;
+  --cy-pink-line: rgb(209 144 173 / 42%);
+  --cy-pink-line-strong: rgb(200 116 155 / 55%);
+  --cy-pink-soft: #f0d4dc;
+  --cy-pink-soft-strong: #e8a0b4;
+  --cy-pink-wash: #fffafc;
+  --cy-accent-wash: #FEE2ED;
+
+  /* 中性浅底（工具结果 / fallback / 附件占位） */
+  --cy-surface-muted: #f4f4f5;
+
+  /* 滚动条 */
+  --cy-scrollbar-thumb: rgb(31 35 48 / 18%);
+  --cy-scrollbar-thumb-hover: rgb(31 35 48 / 30%);
+
+  /* 动效 */
+  --cy-motion-fast: 150ms;
+  --cy-motion-base: 220ms;
+  --cy-motion-slow: 320ms;
+  --cy-ease-out: cubic-bezier(0.2, 0.8, 0.25, 1);
   
   /* 胶囊组件 */
   --cy-pill-bg: #fff9fb;
@@ -50,6 +76,27 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+}
+
+/* 全局细滚动条：消息列表此前从内层 antd-x 滚动盒迁到外层后丢失了细样式，
+   这里对 react 窗口内所有滚动容器统一（含 diff 行、计划面板、贴纸选择器） */
+#cyrene-react-root ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#cyrene-react-root ::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--cy-scrollbar-thumb);
+}
+
+#cyrene-react-root ::-webkit-scrollbar-thumb:hover {
+  background: var(--cy-scrollbar-thumb-hover);
+}
+
+#cyrene-react-root ::-webkit-scrollbar-track,
+#cyrene-react-root ::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 #cyrene-react-root {

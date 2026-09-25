@@ -1,3 +1,5 @@
+import { useTranslation } from "../../i18n";
+
 interface ModeSwitchProps {
   value: string;
   onChange: (mode: string) => void;
@@ -35,14 +37,22 @@ const LearnIcon = (
   </svg>
 );
 
-const modes = [
-  { key: "work", label: "Work", icon: WorkIcon },
-  { key: "chat", label: "Chat", icon: ChatIcon },
-  { key: "code", label: "Code", icon: CodeIcon },
-  { key: "learn", label: "Learn", icon: LearnIcon },
+const MODE_LABEL_KEYS = {
+  work: "ui.modeWork",
+  chat: "ui.modeChat",
+  code: "ui.modeCode",
+  learn: "ui.modeLearn",
+} as const;
+
+const modes: Array<{ key: keyof typeof MODE_LABEL_KEYS; icon: JSX.Element }> = [
+  { key: "work", icon: WorkIcon },
+  { key: "chat", icon: ChatIcon },
+  { key: "code", icon: CodeIcon },
+  { key: "learn", icon: LearnIcon },
 ];
 
 export function ModeSwitch({ value, onChange }: ModeSwitchProps) {
+  const { t } = useTranslation();
   return (
     <div className="cy-segmented">
       {modes.map((mode) => (
@@ -52,7 +62,7 @@ export function ModeSwitch({ value, onChange }: ModeSwitchProps) {
           onClick={() => onChange(mode.key)}
         >
           <span className="cy-segment-icon">{mode.icon}</span>
-          <span className="cy-segment-label">{mode.label}</span>
+          <span className="cy-segment-label">{t(MODE_LABEL_KEYS[mode.key])}</span>
         </button>
       ))}
     </div>

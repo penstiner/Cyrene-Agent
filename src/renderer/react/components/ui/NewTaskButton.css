@@ -10,7 +10,7 @@
   border-radius: 8px;
   cursor: pointer;
   color: var(--cy-text, #1d1d1f);
-  transition: background 0.15s ease;
+  transition: background var(--cy-motion-fast, 150ms) ease;
 }
 
 .cy-side-action:hover {

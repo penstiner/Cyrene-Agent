@@ -7,9 +7,9 @@
   border: none;
   background: transparent;
   border-radius: 8px;
-  color: #8e8e93;
+  color: var(--cy-text-muted);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--cy-motion-fast, 150ms) ease, color var(--cy-motion-fast, 150ms) ease;
 }
 
 .cy-settings-btn:hover {

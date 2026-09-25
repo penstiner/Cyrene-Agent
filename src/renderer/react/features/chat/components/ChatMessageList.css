@@ -92,7 +92,7 @@
 
 .cy-message-avatar__image {
   object-fit: cover;
-  border: 1px solid #FEE2ED;
+  border: 1px solid var(--cy-accent-wash);
   filter: drop-shadow(0 2px 8px rgba(76, 55, 98, 0.22));
   animation: cyrene-avatar-float 3s ease-in-out infinite;
 }
@@ -161,7 +161,7 @@
   margin: 0;
   overflow: hidden;
   border-radius: 13px;
-  background: #eee;
+  background: var(--cy-surface-muted);
 }
 
 .cy-message__image-attachment img {
@@ -318,11 +318,11 @@
 }
 
 .cy-run-activity__header:hover {
-  color: #a5527d;
+  color: var(--cy-pink-ink-strong);
 }
 
 .cy-run-activity__header:focus-visible {
-  outline: 2px solid rgb(200 116 155 / 55%);
+  outline: 2px solid var(--cy-pink-line-strong);
   outline-offset: 3px;
   border-radius: 7px;
 }
@@ -357,7 +357,7 @@
   width: 18px;
   height: 18px;
   flex: 0 0 18px;
-  color: #b7688e;
+  color: var(--cy-pink-ink);
   transition: transform 180ms ease;
 }
 
@@ -416,11 +416,11 @@
 }
 
 .cy-agent-round__header:hover {
-  color: #a84f7a;
+  color: var(--cy-pink-ink);
 }
 
 .cy-agent-round__header:focus-visible {
-  outline: 2px solid rgb(209 144 173 / 42%);
+  outline: 2px solid var(--cy-pink-line);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -453,14 +453,14 @@
 
 /* 完成态标题后的文件改动提示：项目主粉高亮 */
 .cy-agent-round__files {
-  color: var(--cy-accent, #ff5b8a);
+  color: var(--cy-accent, var(--cy-accent));
   font-weight: 600;
 }
 
 .cy-agent-round__chevron {
   width: 16px;
   height: 16px;
-  color: #b7688e;
+  color: var(--cy-pink-ink);
   transition: transform 180ms ease;
 }
 
@@ -476,14 +476,14 @@
 
 .cy-run-activity__process {
   padding: 7px 9px;
-  border-left: 2px solid rgb(209 144 173 / 45%);
+  border-left: 2px solid var(--cy-pink-line);
   color: var(--cy-text-secondary);
   font-size: 12px;
 }
 
 .cy-run-activity__divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(209 144 173 / 38%), transparent);
+  background: linear-gradient(90deg, transparent, var(--cy-pink-line), transparent);
 }
 
 .cy-run-activity__empty {
@@ -609,7 +609,7 @@
   overflow: auto;
   padding: 8px;
   border-radius: 8px;
-  background: #f4f4f5;
+  background: var(--cy-surface-muted);
   color: var(--cy-text-muted);
   font: 12px/1.55 var(--rb-font-mono, monospace);
   white-space: pre-wrap;
@@ -629,7 +629,7 @@
   display: block;
   width: 38px;
   height: 38px;
-  color: #b15b8a;
+  color: var(--cy-pink-ink);
 }
 
 .cy-reasoning-status-art img {
@@ -731,9 +731,9 @@
   max-width: 100%;
   margin: 10px 0;
   padding: 12px;
-  border: 1px solid #f0d4dc;
+  border: 1px solid var(--cy-pink-soft);
   border-radius: 12px;
-  background: #fffafc;
+  background: var(--cy-pink-wash);
   overflow-x: auto;
   text-align: center;
 }
@@ -752,7 +752,7 @@
 
 .cy-mermaid--zoomable:hover,
 .cy-svg-card--zoomable:hover {
-  border-color: #e8a0b4;
+  border-color: var(--cy-pink-soft-strong);
   box-shadow: 0 2px 10px rgba(232, 160, 180, 0.25);
 }
 
@@ -761,7 +761,7 @@
   max-height: 74vh;
   overflow: auto;
   text-align: center;
-  background: #fffafc;
+  background: var(--cy-pink-wash);
   border-radius: 8px;
   padding: 8px;
 }
@@ -773,13 +773,13 @@
 
 .cy-mermaid--pending {
   padding: 18px 12px;
-  color: #9a8a91;
+  color: var(--cy-text-muted);
   font-size: 13px;
 }
 
 .cy-mermaid--fallback .cy-mermaid__hint {
   margin-bottom: 8px;
-  color: #9a8a91;
+  color: var(--cy-text-muted);
   font-size: 12px;
   text-align: left;
 }
@@ -811,15 +811,15 @@
 
 .cy-svg-card--pending {
   padding: 18px 12px;
-  border: 1px solid #f0d4dc;
+  border: 1px solid var(--cy-pink-soft);
   border-radius: 12px;
-  color: #9a8a91;
+  color: var(--cy-text-muted);
   font-size: 13px;
 }
 
 .cy-svg-card--fallback .cy-svg-card__hint {
   margin-bottom: 8px;
-  color: #9a8a91;
+  color: var(--cy-text-muted);
   font-size: 12px;
   text-align: left;
 }
@@ -843,7 +843,7 @@
   padding: 10px 12px;
   border: 1px solid rgb(31 35 48 / 10%);
   border-radius: 10px;
-  background: #f2f2f3;
+  background: var(--cy-surface-muted);
   color: var(--cy-text);
   font: 12px/1.6 Consolas, "Cascadia Code", monospace;
   white-space: pre-wrap;
