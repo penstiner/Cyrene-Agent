@@ -9,6 +9,27 @@
 
 .cy-message-list .ant-bubble-list {
   min-height: 100%;
+  max-height: none;
+}
+
+/* antd-x 内层滚动盒默认 overflow-y:auto + max-height:100%，会抢走外层滚动；
+   取消后由外层 .cy-message-list 统一滚动（多写一层类以压过 cssinjs 同优先级规则） */
+.cy-message-list .ant-bubble-list .ant-bubble-list-scroll-box {
+  overflow-y: visible;
+  max-height: none;
+}
+
+/* antd 默认每条气泡 padding-block 16px，列表被撑得过散；收紧为基础间距 */
+.cy-message-list .ant-bubble-list .ant-bubble {
+  padding-block: 9px;
+}
+
+/* 同一轮回复拆出的碎片（思考/工具调用）之间贴得更近，与轮次边界区分 */
+.cy-message-list .ant-bubble-list .cy-message--reasoning + .cy-message--reasoning,
+.cy-message-list .ant-bubble-list .cy-message--reasoning + .cy-message--tool,
+.cy-message-list .ant-bubble-list .cy-message--tool + .cy-message--reasoning,
+.cy-message-list .ant-bubble-list .cy-message--tool + .cy-message--tool {
+  padding-top: 2px;
 }
 
 .cy-message-list__channel-context {
@@ -184,9 +205,9 @@
   max-width: 100%;
   padding: 12px 16px;
   border-radius: 4px 16px 16px;
-  background: #f7f7f7;
+  background: var(--cy-bubble-assistant-bg);
   color: var(--cy-text);
-  border: 1px solid rgba(31, 35, 48, 0.065);
+  border: 1px solid var(--cy-bubble-assistant-border);
   box-shadow: var(--cy-shadow-bubble-neutral);
 }
 
@@ -886,6 +907,28 @@
   gap: 8px;
 }
 
+.cy-message-time {
+  margin-top: 6px;
+  color: var(--cy-text-muted);
+  font: 400 11px/16px var(--rb-font-sans, sans-serif);
+  user-select: none;
+}
+
+/* 跨天分隔线（role: "divider"，内容为 formatDayDivider 文案） */
+.cy-message-list .ant-bubble-list .ant-bubble-divider {
+  padding-block: 8px;
+}
+
+.cy-message-list .ant-bubble-divider .ant-divider {
+  margin: 6px 0;
+  border-color: var(--cy-border);
+}
+
+.cy-message-list .ant-bubble-divider .ant-divider-inner-text {
+  color: var(--cy-text-muted);
+  font-size: 11px;
+}
+
 .cy-tts-button {
   display: inline-flex;
   margin-top: 6px;
@@ -1068,7 +1111,21 @@
   opacity: 1;
 }
 
+/* 流式尾部光标（x-markdown streaming.tail） */
+.cy-message-markdown .xmd-tail {
+  opacity: 0.65;
+  animation: cy-tail-blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes cy-tail-blink {
+  to { visibility: hidden; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .cy-message-markdown .xmd-tail {
+    animation: none;
+  }
+
   .cy-tts-button,
   .cy-tts-button__wave,
   .cy-last-turn-action,

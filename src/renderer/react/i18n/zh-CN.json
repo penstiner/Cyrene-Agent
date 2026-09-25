@@ -73,6 +73,12 @@
   },
   "messageList": {
     "loadingAria": "加载中",
+    "dayDivider": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "monthDay": "{{month}}月{{day}}日",
+      "fullDate": "{{year}}年{{month}}月{{day}}日"
+    },
     "modelWaitAria": "等待模型响应",
     "modelWaitText": "昔涟正在等模型回应…",
     "thinkingTitle": "正在思考…",

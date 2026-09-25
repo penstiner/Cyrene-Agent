@@ -1,7 +1,7 @@
 import { Bubble, CodeHighlighter, Think, ThoughtChain, type BubbleItemType } from "@ant-design/x";
 import { XMarkdown, type ComponentProps } from "@ant-design/x-markdown";
 import Latex from "@ant-design/x-markdown/plugins/Latex";
-import { Component, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ErrorInfo, type KeyboardEvent, type ReactNode } from "react";
+import { Component, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ErrorInfo, type KeyboardEvent, type ReactNode } from "react";
 import { t, useTranslation } from "../../../i18n";
 import { normalizeModelMarkdown } from "./markdown-normalize";
 import { resolveAsset } from "../../../../../shared/renderer-base";
@@ -37,11 +37,14 @@ import { extractFileChanges, FileChangeCard } from "./FileChangeCard";
 import { ReviewPanel } from "./ReviewPanel";
 import { MermaidBlock } from "./MermaidBlock";
 import { SvgCardBlock } from "./SvgCardBlock";
+import { formatDayDivider, formatMessageClock } from "./message-time";
 
 export interface ChatMessageItem {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  /** 消息创建时间（epoch ms）；缺失时不渲染时间戳/分隔线。 */
+  at?: number;
   reasoning?: string;
   reasoningBlocks?: ReasoningBlock[];
   processMessages?: ProcessMessageRecord[];
@@ -129,19 +132,41 @@ const completedMarkdownOptions = {
   enableAnimation: false,
   tail: false,
 };
+// 流式中的消息：hasNextChunk 开启 x-markdown 的增量缓存（未闭合的公式/链接/表格先 hold-back，
+// 不再“先渲染成文本再跳变”），尾部光标 + 新文本淡入给“正在生成”的视觉锚点
+const streamingMarkdownOptions = {
+  hasNextChunk: true,
+  enableAnimation: true,
+  tail: true,
+};
 
 class MarkdownRenderBoundary extends Component<{
   content: string;
   children: ReactNode;
-}, { failed: boolean }> {
-  state = { failed: false };
+}, { failed: boolean; failedAtLength: number; retries: number }> {
+  // 流式早期的半截内容（未闭合公式/围栏等）可能让解析器抛错；内容继续增长后重试渲染，
+  // 连续失败超过上限则保持降级，避免每个 delta 都闪烁 pre↔markdown
+  static MAX_RETRIES = 5;
+
+  state = { failed: false, failedAtLength: -1, retries: 0 };
 
   static getDerivedStateFromError(): { failed: boolean } {
     return { failed: true };
   }
 
+  static getDerivedStateFromProps(
+    props: { content: string },
+    state: { failed: boolean; failedAtLength: number; retries: number },
+  ): Partial<{ failed: boolean }> | null {
+    if (state.failed && state.retries < MarkdownRenderBoundary.MAX_RETRIES && props.content.length > state.failedAtLength) {
+      return { failed: false };
+    }
+    return null;
+  }
+
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("[ReactChat] Markdown/KaTeX 渲染失败，已降级为原始文本", error, info);
+    this.setState((state) => ({ failedAtLength: this.props.content.length, retries: state.retries + 1 }));
   }
 
   render(): ReactNode {
@@ -166,7 +191,7 @@ export function MarkdownContent({ content, streaming }: { content: string; strea
           openLinksInNewTab
           escapeRawHtml
           rootClassName="cy-message-markdown"
-          streaming={completedMarkdownOptions}
+          streaming={streaming ? streamingMarkdownOptions : completedMarkdownOptions}
         />
       </MessageStreamingContext.Provider>
     </MarkdownRenderBoundary>
@@ -483,6 +508,20 @@ export function RunActivityDetail({
     : <div className="cy-run-activity__empty">{t("messageList.organizingReply")}</div>;
 }
 
+/** 活动标题单独成组件：秒级计时只重渲染标题文本，不连带重渲染展开的过程面板。 */
+function RunActivityTitle({ activity }: { activity: RunActivityRecord }) {
+  const { t } = useTranslation();
+  const now = useRunActivityNow(activity.completedAt === undefined);
+  const snapshot = resolveRunActivitySnapshot(activity, now);
+  return (
+    <span>
+      {snapshot.processing
+        ? t("messageList.activityProcessingTitle", { elapsed: formatElapsed(snapshot.processingMs) })
+        : t("messageList.activityProcessedTitle", { elapsed: formatElapsed(snapshot.processingMs) })}
+    </span>
+  );
+}
+
 function RunActivityContent({
   activityId,
   activity,
@@ -508,18 +547,14 @@ function RunActivityContent({
   expanded: boolean;
   onExpand: (expanded: boolean) => void;
 }) {
-  const { t } = useTranslation();
-  const now = useRunActivityNow(activity.completedAt === undefined);
-  const snapshot = resolveRunActivitySnapshot(activity, now);
+  // 头部图标/折叠只依赖 processing 布尔值，不需要每秒 tick 的 now
+  const snapshot = resolveRunActivitySnapshot(activity, activity.startedAt);
   const wasProcessingRef = useRef(snapshot.processing);
   useEffect(() => {
     if (shouldAutoCollapseRunActivity(wasProcessingRef.current, snapshot.processing, activity.keepExpanded)) onExpand(false);
     wasProcessingRef.current = snapshot.processing;
   }, [activity.keepExpanded, onExpand, snapshot.processing]);
 
-  const title = snapshot.processing
-    ? t("messageList.activityProcessingTitle", { elapsed: formatElapsed(snapshot.processingMs) })
-    : t("messageList.activityProcessedTitle", { elapsed: formatElapsed(snapshot.processingMs) });
   const image = snapshot.processing ? workingMoodUrl : processedMoodUrl;
 
   return (
@@ -536,7 +571,7 @@ function RunActivityContent({
               <img src={image} alt="" draggable={false} />
               {snapshot.processing && <DotSpinner />}
             </span>
-            <span>{title}</span>
+            <RunActivityTitle activity={activity} />
             {stage && <RunStageIndicator stage={stage} />}
         </span>
         <svg className={`cy-run-activity__chevron${expanded ? " is-expanded" : ""}`} viewBox="0 0 16 16" aria-hidden="true">
@@ -692,41 +727,41 @@ function UserContent({
 }
 
 function LastUserMessageEditor({
-  value,
+  initialContent,
   busy,
-  onChange,
   onCancel,
   onSubmit,
 }: {
-  value: string;
+  initialContent: string;
   busy: boolean;
-  onChange: (value: string) => void;
   onCancel: () => void;
-  onSubmit: () => void;
+  onSubmit: (draft: string) => void;
 }) {
   const { t } = useTranslation();
+  // 草稿内聚在编辑器内部：打字不触发消息列表整体重渲染（roles 不再依赖草稿文本）
+  const [draft, setDraft] = useState(initialContent);
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
       onCancel();
     } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
-      onSubmit();
+      onSubmit(draft);
     }
   };
   return (
     <div className="cy-last-message-editor">
       <textarea
         autoFocus
-        value={value}
+        value={draft}
         disabled={busy}
         aria-label={t("messageList.editLastMessageAria")}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
       />
       <div className="cy-last-message-editor__actions">
         <button type="button" disabled={busy} onClick={onCancel}>{t("common.cancel")}</button>
-        <button type="button" className="is-primary" disabled={busy || !value.trim()} onClick={onSubmit}>
+        <button type="button" className="is-primary" disabled={busy || !draft.trim()} onClick={() => onSubmit(draft)}>
           {t("messageList.saveAndRegenerate")}
         </button>
       </div>
@@ -752,12 +787,10 @@ function createRoles(
   preferredAddress: string,
   lastTurn: RevisableLastTurn | null,
   editingMessageId: string | null,
-  editDraft: string,
   revisionBusy: boolean,
-  onBeginEdit: (messageId: string, content: string) => void,
-  onEditDraftChange: (value: string) => void,
+  onBeginEdit: (messageId: string) => void,
   onCancelEdit: () => void,
-  onSubmitEdit: () => void,
+  onSubmitEdit: (messageId: string, draft: string) => void,
   onRegenerate: () => void,
   reasoningExpanded: Readonly<Record<string, boolean>>,
   onReasoningExpand: (id: string, expanded: boolean) => void,
@@ -770,14 +803,13 @@ function createRoles(
     variant: "filled" as const,
     rootClassName: "cy-message cy-message--user",
     avatar: <UserMessageAvatar src={userAvatarUrl} />,
-    contentRender: (content: string, info: { extraInfo?: { messageId?: string; stickerUrl?: string; attachments?: ChatMessageAttachment[]; channelSource?: ChatMessageChannelSource } }) => (
+    contentRender: (content: string, info: { extraInfo?: { at?: number; messageId?: string; stickerUrl?: string; attachments?: ChatMessageAttachment[]; channelSource?: ChatMessageChannelSource } }) => (
       info.extraInfo?.messageId === editingMessageId
         ? <LastUserMessageEditor
-            value={editDraft}
+            initialContent={content}
             busy={revisionBusy}
-            onChange={onEditDraftChange}
             onCancel={onCancelEdit}
-            onSubmit={onSubmitEdit}
+            onSubmit={(draft) => onSubmitEdit(info.extraInfo?.messageId ?? "", draft)}
           />
         : <UserContent
             content={content}
@@ -786,20 +818,24 @@ function createRoles(
             channelSource={info.extraInfo?.channelSource}
           />
     ),
-    footer: (content: string, info: { extraInfo?: { messageId?: string } }) => {
+    footer: (content: string, info: { extraInfo?: { at?: number; messageId?: string } }) => {
       const cleanText = content.replace(/\[sticker:[^\]]+\]/g, "").trim();
       const messageId = info.extraInfo?.messageId;
-      if (!cleanText || messageId === editingMessageId) return null;
+      if (messageId === editingMessageId) return null;
+      const showEdit = messageId === lastTurn?.userMessageId;
+      const time = info.extraInfo?.at;
+      if (!cleanText && !showEdit && time === undefined) return null;
       return (
         <div className="cy-message-actions">
-          {messageId === lastTurn?.userMessageId && (
+          {time !== undefined && <span className="cy-message-time">{formatMessageClock(time)}</span>}
+          {showEdit && (
             <LastTurnActionButton
               kind="edit"
               disabled={revisionBusy}
               onClick={() => onBeginEdit(messageId, cleanText)}
             />
           )}
-          <CopyButton text={cleanText} />
+          {cleanText && <CopyButton text={cleanText} />}
         </div>
       );
     },
@@ -817,13 +853,19 @@ function createRoles(
         channelSource={info.extraInfo?.channelSource}
       />
     ),
-    footer: (content: string, info: { extraInfo?: { messageId?: string; streaming?: boolean; ttsCacheKey?: string } }) => {
+    footer: (content: string, info: { extraInfo?: { at?: number; messageId?: string; streaming?: boolean; ttsCacheKey?: string } }) => {
       const cleanText = content.trim();
       const messageId = info.extraInfo?.messageId;
       const canRegenerate = messageId === lastTurn?.assistantMessageId;
-      if (info.extraInfo?.streaming || (!cleanText && !canRegenerate)) return null;
+      const time = info.extraInfo?.at;
+      const timeNode = time === undefined
+        ? null
+        : <span className="cy-message-time">{formatMessageClock(time)}</span>;
+      if (info.extraInfo?.streaming) return timeNode ? <div className="cy-message-actions">{timeNode}</div> : null;
+      if (!cleanText && !canRegenerate && !timeNode) return null;
       return (
         <div className="cy-message-actions">
+          {timeNode}
           {cleanText && messageId && conversationId && (
             <TtsButton
               conversationId={conversationId}
@@ -942,26 +984,41 @@ function createRoles(
 }
 
 export function createMessageItems(messages: ChatMessageItem[], enabledStickers: EnabledSticker[]): BubbleItemType[] {
-  return messages.flatMap((message) => {
+  const items: BubbleItemType[] = [];
+  let lastDayKey: string | null = null;
+  for (const message of messages) {
+    // 跨天分隔线：仅统计带时间戳的消息，缺失 at 的消息不打断日期序列
+    if (message.at !== undefined) {
+      const dayKey = new Date(message.at).toDateString();
+      if (dayKey !== lastDayKey) {
+        items.push({
+          key: `${message.id}-day`,
+          role: "divider",
+          content: formatDayDivider(message.at),
+        });
+      }
+      lastDayKey = dayKey;
+    }
     if (message.role !== "assistant") {
       const stickerId = extractMessageStickerId(message.content, message.sticker);
-      return [{
+      items.push({
         key: message.id,
         role: message.role,
         content: stripMessageStickerMarkers(message.content),
         extraInfo: {
+          at: message.at,
           stickerUrl: stickerId ? resolveStickerUrl(stickerId, enabledStickers) : undefined,
           attachments: message.attachments,
           messageId: message.id,
           channelSource: message.channelSource,
         },
-      }];
+      });
+      continue;
     }
 
-    const assistantItems: BubbleItemType[] = [];
     const stages = assistantRenderStages(message);
     if (message.waitingForFirstEvent && !message.runActivity) {
-      assistantItems.push({
+      items.push({
         key: `${message.id}-waiting`,
         role: "waiting",
         content: "",
@@ -971,7 +1028,7 @@ export function createMessageItems(messages: ChatMessageItem[], enabledStickers:
       ? message.reasoningBlocks
       : (stages.includes("reasoning") ? [{ id: `${message.id}-legacy`, content: message.reasoning ?? "", streaming: message.reasoningStreaming }] : []);
     const appendReasoning = (block: ReasoningBlock) => {
-      assistantItems.push({
+      items.push({
         key: `${message.id}-reasoning-${block.id}`,
         role: "reasoning",
         content: "",
@@ -984,7 +1041,7 @@ export function createMessageItems(messages: ChatMessageItem[], enabledStickers:
     };
     const tools = message.toolExecutions ?? [];
     if (message.runActivity) {
-      assistantItems.push({
+      items.push({
         key: `${message.id}-activity`,
         role: "activity",
         content: "",
@@ -1004,7 +1061,7 @@ export function createMessageItems(messages: ChatMessageItem[], enabledStickers:
       for (let index = 0; index <= tools.length; index += 1) {
         reasoningBlocks.filter((block) => (block.afterToolCount ?? 0) === index).forEach(appendReasoning);
         if (index === tools.length) continue;
-        assistantItems.push({
+        items.push({
           key: `${message.id}-tool-${tools[index].id}`,
           role: "tool",
           content: "",
@@ -1013,7 +1070,7 @@ export function createMessageItems(messages: ChatMessageItem[], enabledStickers:
       }
     }
     if (message.weather) {
-      assistantItems.push({
+      items.push({
         key: `${message.id}-weather`,
         role: "weather",
         content: "",
@@ -1021,13 +1078,14 @@ export function createMessageItems(messages: ChatMessageItem[], enabledStickers:
       });
     }
     if (stages.includes("assistant")) {
-      assistantItems.push({
+      items.push({
         key: message.id,
         role: "assistant",
         content: message.content,
         streaming: message.streaming,
         extraInfo: {
           messageId: message.id,
+          at: message.at,
           streaming: message.streaming,
           ttsCacheKey: message.ttsCacheKey,
           stickerUrl: message.sticker ? resolveStickerUrl(message.sticker, enabledStickers) : undefined,
@@ -1037,15 +1095,15 @@ export function createMessageItems(messages: ChatMessageItem[], enabledStickers:
     }
     // Review 面板：Run 结束后（非 streaming/loading）且有 runId 时显示
     if (message.runId && !message.streaming && !message.loading) {
-      assistantItems.push({
+      items.push({
         key: `${message.id}-review`,
         role: "review",
         content: "",
         extraInfo: { runId: message.runId },
       });
     }
-    return assistantItems;
-  });
+  }
+  return items;
 }
 
 export function ChatMessageList({
@@ -1066,28 +1124,25 @@ export function ChatMessageList({
   const [enabledStickers, setEnabledStickers] = useState<EnabledSticker[]>([]);
   const [reasoningExpanded, setReasoningExpanded] = useState<Record<string, boolean>>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState("");
   const lastTurn = resolveRevisableLastTurn(messages, mode);
   const onReasoningExpand = useCallback((id: string, expanded: boolean) => {
     setReasoningExpanded((current) => updateReasoningExpanded(current, id, expanded));
   }, []);
-  const beginEdit = useCallback((messageId: string, content: string) => {
+  const beginEdit = useCallback((messageId: string) => {
     setEditingMessageId(messageId);
-    setEditDraft(content);
   }, []);
   const cancelEdit = useCallback(() => {
     if (revisionBusy) return;
     setEditingMessageId(null);
-    setEditDraft("");
   }, [revisionBusy]);
-  const submitEdit = useCallback(() => {
-    if (!editingMessageId || !editDraft.trim() || !onEditLastUserMessage || revisionBusy) return;
-    void onEditLastUserMessage(editingMessageId, editDraft.trim()).then((accepted) => {
+  const submitEdit = useCallback((messageId: string, draft: string) => {
+    const content = draft.trim();
+    if (!messageId || !content || revisionBusy) return;
+    void onEditLastUserMessage?.(messageId, content).then((accepted) => {
       if (!accepted) return;
       setEditingMessageId(null);
-      setEditDraft("");
     });
-  }, [editDraft, editingMessageId, onEditLastUserMessage, revisionBusy]);
+  }, [onEditLastUserMessage, revisionBusy]);
   const regenerate = useCallback(() => {
     if (!lastTurn || !onRegenerateLastResponse || revisionBusy) return;
     void onRegenerateLastResponse(lastTurn.userMessageId, lastTurn.assistantMessageId);
@@ -1100,6 +1155,22 @@ export function ChatMessageList({
     const el = containerRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
+
+  // antd-x 的 Bubble.List 自带内层滚动盒；这里关闭其 autoScroll 并在 CSS 中取消内层滚动，
+  // 让外层 .cy-message-list 成为唯一滚动容器 —— 回到底部按钮、sticky 渠道横幅、切会话兜底滚动都挂在外层。
+  // antd autoScroll 的“贴底跟随”由 ResizeObserver 等价实现：内容高度变化时若正贴底则继续贴底。
+  useEffect(() => {
+    const container = containerRef.current;
+    const list = container?.querySelector(".ant-bubble-list");
+    if (!container || !list || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (isNearBottomRef.current) {
+        container.scrollTo({ top: container.scrollHeight });
+      }
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
   }, []);
 
   // 向父组件注册滚动到底部的回调
@@ -1116,8 +1187,8 @@ export function ChatMessageList({
     onScrollToBottomVisibilityChange?.(!nearBottom);
   }, [onScrollToBottomVisibilityChange]);
 
-  // 打开/切换会话时滚动到底部
-  useEffect(() => {
+  // 打开/切换会话时滚动到底部；用 layout effect 在首帧绘制前完成，避免先见顶再跳底
+  useLayoutEffect(() => {
     scrollToBottom("auto");
     // 内容渲染后再次兜底滚动
     const timer = window.setTimeout(() => scrollToBottom("auto"), 100);
@@ -1134,10 +1205,8 @@ export function ChatMessageList({
       preferredAddress,
       lastTurn,
       editingMessageId,
-      editDraft,
       revisionBusy,
       beginEdit,
-      setEditDraft,
       cancelEdit,
       submitEdit,
       regenerate,
@@ -1146,13 +1215,12 @@ export function ChatMessageList({
       onTtsCacheKey,
       onOpenReviewInspector,
     ),
-    [beginEdit, cancelEdit, conversationId, editDraft, editingMessageId, lastTurn, mode, onOpenReviewInspector, onReasoningExpand, onTtsCacheKey, preferredAddress, reasoningExpanded, regenerate, revisionBusy, submitEdit, userAvatarUrl],
+    [beginEdit, cancelEdit, conversationId, editingMessageId, lastTurn, mode, onOpenReviewInspector, onReasoningExpand, onTtsCacheKey, preferredAddress, reasoningExpanded, regenerate, revisionBusy, submitEdit, userAvatarUrl],
   );
 
   useEffect(() => {
     if (editingMessageId && editingMessageId !== lastTurn?.userMessageId) {
       setEditingMessageId(null);
-      setEditDraft("");
     }
   }, [editingMessageId, lastTurn?.userMessageId]);
 
@@ -1170,7 +1238,10 @@ export function ChatMessageList({
     };
   }, []);
 
-  const items = createMessageItems(messages, enabledStickers);
+  const items = useMemo(
+    () => createMessageItems(messages, enabledStickers),
+    [messages, enabledStickers],
+  );
   const channelConversationLabel = resolveChannelConversationLabel(messages);
 
   return (
@@ -1186,7 +1257,7 @@ export function ChatMessageList({
           <span>{channelConversationLabel}</span>
         </div>
       )}
-      <Bubble.List items={items} role={roles} autoScroll />
+      <Bubble.List items={items} role={roles} autoScroll={false} />
     </div>
   );
 }

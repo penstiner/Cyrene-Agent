@@ -71,15 +71,19 @@ describe("assistantRenderStages", () => {
     expect(source).not.toContain("destroyOnHidden={false}");
   });
 
-  it("keeps Markdown renderer options stable and leaves streaming state to AG-UI", () => {
+  it("keeps Markdown renderer options stable (module constants, never inline literals)", () => {
+    // 历史 bug（d5d55565）：streaming 传内联对象字面量导致每次渲染新对象 → 解析循环回退。
+    // 现在流式/完成两套 options 都是模块级常量，仅按消息状态二选一，对象身份跨渲染稳定。
     const source = fs.readFileSync(
       fileURLToPath(new URL("./ChatMessageList.tsx", import.meta.url)),
       "utf8",
     );
     expect(source).toContain("const markdownComponents = { code: MarkdownCode };");
     expect(source).toContain("components={markdownComponents}");
-    expect(source).toContain("streaming={completedMarkdownOptions}");
-    expect(source).not.toContain("streaming={streaming ? streamingMarkdownOptions : completedMarkdownOptions}");
+    expect(source).toContain("const completedMarkdownOptions = {");
+    expect(source).toContain("const streamingMarkdownOptions = {");
+    expect(source).toContain("streaming={streaming ? streamingMarkdownOptions : completedMarkdownOptions}");
+    expect(source).not.toMatch(/streaming=\{\{/);
     expect(source).not.toContain("componentDidUpdate(previousProps");
     expect(source).toContain("prismLightMode={false}");
   });

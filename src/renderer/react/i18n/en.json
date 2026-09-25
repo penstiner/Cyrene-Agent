@@ -73,6 +73,12 @@
   },
   "messageList": {
     "loadingAria": "Loading",
+    "dayDivider": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "monthDay": "{{month}}/{{day}}",
+      "fullDate": "{{year}}/{{month}}/{{day}}"
+    },
     "modelWaitAria": "Waiting for model response",
     "modelWaitText": "Waiting for the model to respond…",
     "thinkingTitle": "Thinking…",

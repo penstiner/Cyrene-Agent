@@ -115,11 +115,12 @@ export function useSchedulerEvents(deps: UseSchedulerEventsDeps): void {
         streamsRef.current.set(runKey, { sessionId, replyId, content: "", tools: [] });
         if (!sessionId) return;
         depsRef.current.appendMessages(sessionId, [
-          { id: noticeId, role: "assistant", content: `定时任务「${title}」已触发` },
+          { id: noticeId, role: "assistant", content: `定时任务「${title}」已触发`, at: Date.now() },
           {
             id: replyId,
             role: "assistant",
             content: "",
+            at: Date.now(),
             loading: true,
             waitingForFirstEvent: true,
             streaming: false,

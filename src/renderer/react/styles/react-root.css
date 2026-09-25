@@ -11,10 +11,15 @@
   
   /* 文字 */
   --cy-text: #1d1d1f;
+  --cy-text-secondary: #5c5c62;
   --cy-text-muted: #8e8e93;
-  
+
   /* 强调色 */
   --cy-accent: #FF5B8A;
+
+  /* 气泡 */
+  --cy-bubble-assistant-bg: #f7f7f7;
+  --cy-bubble-assistant-border: rgb(31 35 48 / 7%);
   
   /* 胶囊组件 */
   --cy-pill-bg: #fff9fb;
