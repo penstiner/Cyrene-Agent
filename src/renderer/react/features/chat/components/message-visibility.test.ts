@@ -78,7 +78,7 @@ describe("assistantRenderStages", () => {
       fileURLToPath(new URL("./ChatMessageList.tsx", import.meta.url)),
       "utf8",
     );
-    expect(source).toContain("const markdownComponents = { code: MarkdownCode, img: MarkdownImage };");
+    expect(source).toContain("const markdownComponents = { code: MarkdownCode, img: MarkdownImage, table: MarkdownTable };");
     expect(source).toContain("components={markdownComponents}");
     expect(source).toContain("const completedMarkdownOptions = {");
     expect(source).toContain("const streamingMarkdownOptions = {");

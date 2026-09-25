@@ -193,7 +193,17 @@ function MarkdownImage({ src, alt }: ComponentProps<{ src?: string; alt?: string
   );
 }
 
-const markdownComponents = { code: MarkdownCode, img: MarkdownImage };
+/** markdown 表格：保持 table 原生布局（列撑满宽度），横向滚动交给外层包裹容器。
+ *  若改用 display:block 让表格自身滚动，内部匿名表格盒只按内容收缩，会出现大片右侧空白。 */
+function MarkdownTable({ children }: ComponentProps<{ children?: ReactNode }>) {
+  return (
+    <div className="cy-md-table-wrap">
+      <table>{children}</table>
+    </div>
+  );
+}
+
+const markdownComponents = { code: MarkdownCode, img: MarkdownImage, table: MarkdownTable };
 const completedMarkdownOptions = {
   hasNextChunk: false,
   enableAnimation: false,

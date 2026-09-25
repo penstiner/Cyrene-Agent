@@ -896,16 +896,20 @@
   font-family: Consolas, "Cascadia Code", monospace;
 }
 
-/* 宽表横向滚动：display block 让表格元素自身成为滚动容器（GitHub 式处理） */
+/* 表格：原生 table 布局撑满气泡；宽表由外层 .cy-md-table-wrap 横向滚动 */
 .cy-message-markdown table {
-  display: block;
-  width: fit-content;
-  min-width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
+  width: 100%;
+  margin: 0;
   border-collapse: collapse;
+}
+
+.cy-md-table-wrap {
+  max-width: 100%;
+  margin: 0.5em 0;
+  overflow-x: auto;
   border: 1px solid var(--md-table-border);
   border-radius: 8px;
+  scrollbar-width: thin;
 }
 
 .cy-message-markdown th,
